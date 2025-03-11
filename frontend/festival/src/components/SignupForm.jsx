@@ -1,9 +1,14 @@
-import React from "react";
+import React,{useState} from "react";
 import { useNavigate } from "react-router-dom";
+import axios from 'axios';
 
 function SignupForm() {
   const navigate = useNavigate();
-
+  const [formData, setFormData] = useState({
+    full_name: "",
+    email: "",
+    password: "",
+}); 
   const styles = {
     container: {
       display: "flex",
@@ -58,13 +63,20 @@ function SignupForm() {
     },
   };
 
-  const handleLoginClick = () => {
-    navigate("/login");
-  };
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+};   
 
-  const handleSignupSubmit = (e) => {
+  const handleSignupSubmit = async (e) => {
     e.preventDefault();
-    navigate("/login");
+    try{
+        const response = await axios.post("http://127.0.0.1:5000/signup", formData);
+        alert(response.data.message);
+
+     navigate("/login");
+} catch (error) {
+    alert(error.response?.data?.error || "Signup failed. Try again!");  
+}
   };
 
   return (
@@ -72,13 +84,13 @@ function SignupForm() {
       <div style={styles.formContainer}>
         <h2 style={styles.heading}>Signup:</h2>
         <form onSubmit={handleSignupSubmit}>
-          <input type="text" placeholder="full-name:" style={styles.inputField} required />
-          <input type="email" placeholder="email:" style={styles.inputField} required />
-          <input type="password" placeholder="password:" style={styles.inputField} required />
+          <input type="text" name="full_name"  placeholder="full-name:" style={styles.inputField} value={formData.full_name} onChange={handleInputChange} required />
+          <input type="email" name="email" placeholder="Email:" style={styles.inputField} value={formData.email} onChange={handleInputChange} required />
+          <input type="password" name="password" placeholder="password:" style={styles.inputField} value={formData.password} onChange={handleInputChange} required />
           <button type="submit" style={styles.button}>SignUp</button>
         </form>
         <p style={styles.linkText}>
-          Already have an account? <span style={styles.loginButton} onClick={handleLoginClick}>Login</span>
+          Already have an account? <span style={styles.loginButton} onClick={() => navigate("/login")}>Login</span>
         </p>
       </div>
     </div>

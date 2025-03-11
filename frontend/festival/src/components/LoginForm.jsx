@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from 'axios';
 
 const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -79,11 +80,19 @@ const LoginForm = () => {
     return isValid;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validate()) {
-      alert("Login successful!");
-      navigate("/scrollable-cards");
+    if (!validate()) return;
+    try {
+        const response = await axios.post("http://127.0.0.1:5000/login", {
+          email,
+          password,
+        }); 
+
+        alert(response.data.message);
+        navigate("/scrollable-cards");
+    } catch (error) {
+        alert(error.response?.data?.error || "Login failed. Try again!");
     }
   };
 
@@ -114,7 +123,7 @@ const LoginForm = () => {
         <button type="submit" style={styles.button}>Login</button>
         <p style={styles.linkText}>
           Don't have an account? {" "}
-          <span style={styles.signupButton} onClick={() => navigate("signup")}>
+          <span style={styles.signupButton} onClick={() => navigate("/signup")}>
             Signup
           </span>
         </p>
