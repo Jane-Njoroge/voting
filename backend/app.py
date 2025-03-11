@@ -10,11 +10,13 @@ from flask import redirect, url_for
 from twilio.rest import Client
 import random
 from werkzeug.utils import secure_filename
+from flask_cors import CORS
 
 
 
 
 app = Flask(__name__)
+CORS(app)
 load_dotenv()
 UPLOAD_FOLDER = os.path.abspath(os.path.join(os.getcwd(), 'uploads/profile_folder'))
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -104,7 +106,7 @@ def signup():
 
     existing_user = Candidate.query.filter_by(email=email).first()
     if existing_user:
-        return redirect(url_for('login'))
+        return jsonify({'error': 'User already exists, please log in'}), 400
     
     hashed_password = generate_password_hash(password)
     
@@ -611,4 +613,4 @@ def delete_all_candidates():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True),
