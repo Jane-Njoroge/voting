@@ -546,8 +546,8 @@ def vote():
 
   
 
-##@app.route('/delete_unverified_candidates', methods=['DELETE'])
-##def delete_unverified_candidates():
+@app.route('/delete_unverified_candidates', methods=['DELETE'])
+def delete_unverified_candidates():
 
     unverified_candidates = Verification.query.filter(
        (Verification.phone_number == None) | (Verification.phone_number == '') |
@@ -568,8 +568,8 @@ def vote():
 
 
 
-##@app.route('/list_candidates', methods=['GET'])
-##def list_candidates():
+@app.route('/list_candidates', methods=['GET'])
+def list_candidates():
     candidates = Candidate.query.all()
     
     if not candidates:
@@ -589,10 +589,10 @@ def vote():
     return jsonify({'candidates': candidates_list}), 200
 
 
-##from sqlalchemy import text
+from sqlalchemy import text
 
-##@app.route('/delete_all_candidates', methods=['DELETE'])
-##def delete_all_candidates():
+@app.route('/delete_all_candidates', methods=['DELETE'])
+def delete_all_candidates():
     try:
         # First, delete all verification records
         db.session.execute(text("DELETE FROM verification"))
