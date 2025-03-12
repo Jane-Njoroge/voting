@@ -47,7 +47,7 @@ const navigate = useNavigate();
           <div 
           key={index} 
           style={styles.card}
-          onClick={() => navigate("/account-form")}
+          onClick={() => navigate("/account-form", { state: { category: text } })}
           >
             <a href="#" style={styles.link}>{text}</a>
           </div>

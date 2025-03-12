@@ -10,11 +10,13 @@ from flask import redirect, url_for
 from twilio.rest import Client
 import random
 from werkzeug.utils import secure_filename
+from flask_cors import CORS
 
 
 
 
 app = Flask(__name__)
+CORS(app) 
 load_dotenv()
 UPLOAD_FOLDER = os.path.abspath(os.path.join(os.getcwd(), 'uploads/profile_folder'))
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -40,6 +42,7 @@ TWILIO_VERIFY_SERVICE_SID = os.getenv("TWILIO_VERIFY_SERVICE_SID")
 TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 
 db = SQLAlchemy(app)
+
 migrate = Migrate(app,db)
 mail = Mail(app)
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
@@ -104,7 +107,7 @@ def signup():
 
     existing_user = Candidate.query.filter_by(email=email).first()
     if existing_user:
-        return redirect(url_for('login'))
+        return jsonify({'error': 'User already exists, please log in'}), 400
     
     hashed_password = generate_password_hash(password)
     
@@ -504,8 +507,8 @@ def upload_profile_image():
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
-@app.route('/vote',methods=['POST'])
-def vote():
+##@app.route('/vote',methods=['POST'])
+##def vote():
     data = request.get_json()
     voter_phone = data.get('voter_phone')
     candidate_id = data.get('candidate_id')
