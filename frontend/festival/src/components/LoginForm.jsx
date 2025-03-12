@@ -88,7 +88,6 @@ const LoginForm = () => {
           email,
           password,
         }); 
-
         alert(response.data.message);
         navigate("/scrollable-cards");
     } catch (error) {

@@ -1,21 +1,78 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import addpro from './addpro.webp'
 import pro1 from './pro1.jpg'
+import { useLocation } from "react-router-dom";
 
-const ProfilePage = ({ name, votes }) => {
+const ProfilePage = () => {
   const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [votes, setVotes] = useState(0);
+  const [profileImage, setProfileImage] = useState(null);
+
+  const location = useLocation();
+  const selectedCategory = location.state?.category || "No category selected";
+  
+
+
+  useEffect(() => {
+    fetch("http://localhost:5000/get-profile", {
+      method: "GET",
+      credentials: "include"
+    })
+    .then((res) => res.json())
+    .then((data) => {
+      console.log("Profile data:", data);
+      setName(data.name);
+      setVotes(data.votes);
+      setProfileImage(data.profileImage);
+    })
+    .catch((error) => console.error("Error fetching profile:", error));
+  }, []);
+
+  const handleImageChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("profile_image", file);
+
+    
+
+    try {
+        const response = await fetch("http://your-backend-url.com/api/candidates", {
+          method: "POST",
+          body: JSON.stringify(data),
+          credentials: "include",
+        });
+
+        const data = await response.json();
+        setProfileImage(data.profileImage);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+    }
+  };
+
+
 
   return (
     <div style={styles.container}>
+    <p>Selected Category: {selectedCategory}</p>
       <h2 style={styles.name}>Name: {name}</h2>
      
-     <div style={styles.profileIcon}>
+     <div style={styles.profileIcon} onClick={() => document.getElementById("fileInput").click()}>
       <img 
-      src={addpro} 
+      src={profileImage || addpro} 
       alt="addpro" 
       style={styles.profileImage}
        />
        </div>
+       <input
+       type="file"
+       id="fileInput"
+       accept="image/*"
+       onChange={handleImageChange}
+       style={{ display: "none" }}
+       />
 
 
         <p style={styles.votes}>Votes: {votes}</p>
@@ -36,7 +93,7 @@ const ProfilePage = ({ name, votes }) => {
 
 const styles = {
     container: {
-      backgroundColor: "#5c0e0e", // Dark red background
+      backgroundColor: "#5c0e0e",
       color: "white",
       textAlign: "center",
       height: "100vh",

@@ -17,7 +17,7 @@ function App() {
         <Route path="/" element={<Header/>} />
        <Route path="/" element={< KalenjinMusicFestival/>} />
        <Route path="/signup" element={<SignupForm />} />
-       <Route path="/login" element={<LoginForm />} />
+       <Route path="/login" element={<LoginForm />} /> 
        <Route path="/scrollable-cards" element={<ScrollableCards/>}/>
        <Route path="/account-form" element={<AccounForm/>}/>
        <Route path="/verification-form" element={<VerificationForm/>}/>
