@@ -29,7 +29,6 @@ function Header() {
         textShadow: "2px 2px 4px rgba(0, 0, 0, 0.5)",
       }}
     >
-      <h1>My Music Festival App</h1>
     </div>
   );
 }
