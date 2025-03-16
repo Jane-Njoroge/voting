@@ -1,18 +1,18 @@
-import React,{useState} from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from 'axios';
 
 function SignupForm() {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    full_name: "",
-    email: "",
-    password: "",
-}); 
-
-const [loading, setLoading] = useState(false);
-const [errorMessage, setErrorMessage] = useState("");
-  const styles = {
+    const navigate = useNavigate();
+    const [formData, setFormData] = useState({
+        full_name: "",
+        email: "",
+        password: "",
+    });
+    const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+ 
+ const styles = {
     container: {
       display: "flex",
       justifyContent: "center",
@@ -68,45 +68,46 @@ const [errorMessage, setErrorMessage] = useState("");
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-};   
+};
 
-  const handleSignupSubmit = async (e) => {
+const handleSignupSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    try{
+    try {
         const response = await axios.post("http://127.0.0.1:5000/signup", formData, {
-          headers: {
-            "Content-Type": "application/json",
-          },
+            headers: {
+                "Content-Type": "application/json",
+            },
         });
         alert(response.data.message);
+        navigate("/login");
+    } catch (error) {
+        setLoading(false);
+        setErrorMessage(error.response?.data?.error || "Signup failed. Try again!");
+    } finally {
+        setLoading(false);
+    }
+};
 
-
-
-     navigate("/login");
-} catch (error) {
-  setLoading(false);
-  setErrorMessage(error.response?.data?.error || "Signup failed. Try again!");  
-}
-  };
-
-  return (
+return (
     <div style={styles.container}>
-      <div style={styles.formContainer}>
-        <h2 style={styles.heading}>Signup:</h2>
-        {errorMessage && <p style={styles.errorMessage}>{errorMessage}</p>}
-        <form onSubmit={handleSignupSubmit}>
-          <input type="text" name="full_name"  placeholder="full-name:" style={styles.inputField} value={formData.full_name} onChange={handleInputChange} required />
-          <input type="email" name="email" placeholder="Email:" style={styles.inputField} value={formData.email} onChange={handleInputChange} required />
-          <input type="password" name="password" placeholder="password:" style={styles.inputField} value={formData.password} onChange={handleInputChange} required />
-          <button type="submit" style={styles.button}>SignUp</button>
-        </form>
-        <p style={styles.linkText}>
-          Already have an account? <span style={styles.loginButton} onClick={() => navigate("/login")}>Login</span>
-        </p>
-      </div>
+        <div style={styles.formContainer}>
+            <h2 style={styles.heading}>Signup:</h2>
+            {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+            <form onSubmit={handleSignupSubmit}>
+                <input type="text" name="full_name" placeholder="Full Name:" style={styles.inputField} value={formData.full_name} onChange={handleInputChange} required />
+                <input type="email" name="email" placeholder="Email:" style={styles.inputField} value={formData.email} onChange={handleInputChange} required />
+                <input type="password" name="password" placeholder="Password:" style={styles.inputField} value={formData.password} onChange={handleInputChange} required />
+                <button type="submit" style={styles.button} disabled={loading}>
+                    {loading ? "Signing up..." : "SignUp"}
+                </button>
+            </form>
+            <p style={styles.linkText}>
+                Already have an account? <span style={styles.loginButton} onClick={() => navigate("/login")}>Login</span>
+            </p>
+        </div>
     </div>
-  );
+);
 }
 
 export default SignupForm;

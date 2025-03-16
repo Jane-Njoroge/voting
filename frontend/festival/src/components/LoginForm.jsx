@@ -1,31 +1,31 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const LoginForm = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const navigate = useNavigate();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [emailError, setEmailError] = useState("");
+    const [passwordError, setPasswordError] = useState("");
+    const navigate = useNavigate();
 
-  useEffect(() => {
-    axios
-      .get("http://127.0.0.1:5000/check-session", {
-        withCredentials: true,
-      })
-      .then((response) => {
-        console.log("Session Data:", response.data);
-        if (response.data.user_id) {
-          console.log("User is already logged in with ID:", response.data.user_id);
-          navigate("/scrollable-cards");
-        }
-      })
-      .catch((error) => {
-        console.error("Error checking session:", error.message);
-      });
-  }, []);
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const response = await axios.get("http://127.0.0.1:5000/check-session", {
+                    withCredentials: true
+                });
+                if (response.data.user_id) {
+                    console.log("User is already logged in with ID:", response.data.user_id);
+                    navigate("/scrollable-cards");
+                }
+            } catch (error) {
+                console.error("Error checking session:", error.message);
+            }
+        };
 
+        checkSession();
+    }, [navigate]);
   const styles = {
     container: {
       display: "flex",
@@ -102,41 +102,20 @@ const LoginForm = () => {
     if (!validate()) return;
 
     try {
-      console.log("Sending to backend:", { email, password });
-
       const response = await axios.post(
         "http://127.0.0.1:5000/login",
         { email, password },
         { withCredentials: true }
       );
 
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const result = response.data;
-      console.log("Response from backend:", result);
-
-      if (result.candidate_id) {
-        sessionStorage.setItem("candidate_id", result.candidate_id);
-        console.log("Stored Candidate ID:", result.candidate_id);
-        localStorage.setItem("candidateEmail", email);
-
-        navigate("/scrollable-cards");
-        alert(result.message);
-      } else {
-        console.error("Candidate ID is missing in response.");
-        alert("Login failed.");
-      }
+      const { candidate_id } = response.data;
+      sessionStorage.setItem("candidate_id", candidate_id);
+      localStorage.setItem("candidateEmail", email);
+      navigate("/scrollable-cards");
+      alert("Login successful!");
     } catch (error) {
-      console.error(
-        "Login Error:",
-        error.response?.data?.error || error.message
-      );
-      alert(
-        error.response?.data?.error ||
-          "Login failed. Please check your credentials and try again!"
-      );
+      console.error("Login Error:", error);
+      alert(error.response?.data?.error || "Login failed. Please check your credentials!");
     }
   };
 
@@ -152,11 +131,7 @@ const LoginForm = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          {emailError && (
-            <div style={{ color: "red", fontSize: "0.8em", textAlign: "left" }}>
-              {emailError}
-            </div>
-          )}
+          {emailError && <div style={{ color: "red" }}>{emailError}</div>}
         </div>
         <div>
           <input
@@ -166,21 +141,14 @@ const LoginForm = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          {passwordError && (
-            <div style={{ color: "red", fontSize: "0.8em", textAlign: "left" }}>
-              {passwordError}
-            </div>
-          )}
+          {passwordError && <div style={{ color: "red" }}>{passwordError}</div>}
         </div>
         <button type="submit" style={styles.button}>
           Login
         </button>
         <p style={styles.linkText}>
           Don't have an account?{" "}
-          <span
-            style={styles.signupButton}
-            onClick={() => navigate("/signup")}
-          >
+          <span style={styles.signupButton} onClick={() => navigate("/signup")}>
             Signup
           </span>
         </p>

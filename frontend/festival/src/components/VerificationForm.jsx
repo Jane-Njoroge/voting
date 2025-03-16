@@ -1,6 +1,10 @@
 import React, { useState } from "react";
+import { useParams,useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const VerificationPage = () => {
+  const { candidateId } = useParams();
+  const navigate = useNavigate();
   const [idNumber, setIdNumber] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -13,58 +17,35 @@ const VerificationPage = () => {
     }
 
     try {
-      const response = await fetch("/verify_and_send_otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          candidate_id: idNumber,  
-          national_id: idNumber,   
-          phone_number: phoneNumber,
-        }),
-      });
+      const response = await axios.post(
+        "http://127.0.0.1:5000/verify_and_send_otp",
+        { candidate_id: candidateId, national_id: idNumber, phone_number: phoneNumber },
+        { withCredentials: true }
+      );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        alert("Verification Failed: " + data.error);
-        return;
+      if (response.data.message) {
+        setOtpSent(true);
+        alert("OTP sent!");
       }
-
-      setOtpSent(true);
-      console.log("Verification successful! Proceeding to send OTP...");
     } catch (error) {
-      console.error("Error sending OTP:", error);
-      alert("An error occurred while sending OTP.");
+      alert(error.response?.data?.error || "Failed to send OTP.");
     }
   };
 
   const verifyOTP = async () => {
     try {
-      const response = await fetch("http://localhost:5000/verify_otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phone_number: phoneNumber,
-          otp: enteredOTP, 
-        }),
-      });
+      const response = await axios.post(
+        "http://127.0.0.1:5000/verify_otp",
+        { phone_number: phoneNumber, otp: enteredOTP },
+        { withCredentials: true }
+      );
 
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log("Phone number verified successfully!");
-        alert("Phone number verified successfully!");
-      } else {
-        console.error("OTP verification failed:", data.error);
-        alert("Invalid OTP. Please try again.");
+      if (response.data.message) {
+        alert("Phone number verified!");
+        navigate(`/account-form/${candidateId}`);
       }
     } catch (error) {
-      console.error("Error verifying OTP:", error);
-      alert("An error occurred while verifying OTP.");
+      alert(error.response?.data?.error || "Invalid OTP.");
     }
   };
 
@@ -74,7 +55,7 @@ const VerificationPage = () => {
       <div style={styles.box}>
         {!otpSent ? (
           <>
-            <label style={styles.label}>National Identification Card/ID:</label>
+            <label style={styles.label}>National ID:</label>
             <input
               type="text"
               style={styles.input}
@@ -82,7 +63,6 @@ const VerificationPage = () => {
               value={idNumber}
               onChange={(e) => setIdNumber(e.target.value)}
             />
-
             <label style={styles.label}>Phone Number:</label>
             <input
               type="text"
@@ -91,7 +71,6 @@ const VerificationPage = () => {
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
             />
-
             <button style={styles.button} onClick={sendOTP}>
               Send OTP
             </button>
@@ -115,7 +94,6 @@ const VerificationPage = () => {
     </div>
   );
 };
-
 const styles = {
   container: {
     display: "flex",
