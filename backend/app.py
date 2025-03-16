@@ -11,26 +11,56 @@ from twilio.rest import Client
 import random
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
+import logging
 
 
 
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app) 
-load_dotenv()
+CORS(app,supports_credentials=True) 
+
+
+
 UPLOAD_FOLDER = os.path.abspath(os.path.join(os.getcwd(), 'uploads/profile_folder'))
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://van:1234@localhost/voting_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ECHO'] = False
+
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS','False').lower() == 'true'
+
+
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['SESSION_TYPE'] = 'filesystem'
+CORS(app,supports_credentials=True, origins=["http://127.0.0.1:5500", "http://localhost:3000"]) 
+
+db = SQLAlchemy(app)
+migrate = Migrate(app,db)
+mail = Mail(app)
+
+
+
+
+app.config['DEBUG'] = True
+logging.basicConfig(level=logging.DEBUG)
+
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+
+app.config["SESSION_COOKIE_SECURE"] = True
+
+
 
 
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT'))
-app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS','False').lower() == 'true'
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
@@ -41,14 +71,10 @@ TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_VERIFY_SERVICE_SID = os.getenv("TWILIO_VERIFY_SERVICE_SID")
 TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 
-db = SQLAlchemy(app)
 
-migrate = Migrate(app,db)
-mail = Mail(app)
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -64,18 +90,17 @@ class Candidate(db.Model):
     verifications = db.relationship('Verification', backref='candidate', lazy=True)
     votes = db.relationship('Votes', backref='candidate', lazy=True)
 
-
-
+    
 
 
 class Verification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidate.id'), nullable=False)
-    phone_number = db.Column(db.String(20), unique=True, nullable=False)
+    phone_number = db.Column(db.String(20),unique=True, nullable=False)
     national_id = db.Column(db.String(50), unique=True,nullable=False)
-    profile_image = db.Column(db.String(255), nullable=True) 
+    profile_image = db.Column(db.String(255), nullable=True, default='default.jpg') 
     is_verified = db.Column(db.Boolean, default=False)
-    category = db.Column(db.String(50), nullable=False) 
+    category = db.Column(db.String(200), nullable=False, default='Uncategorized') 
     vote_count = db.Column(db.Integer, default=0)
 
 
@@ -83,6 +108,10 @@ class Votes(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidate.id'), nullable=False)
     voter_phone = db.Column(db.String(20), nullable=False)
+
+
+
+
 
 
 
@@ -116,15 +145,63 @@ def signup():
 
     db.session.add(new_candidate)
     db.session.commit()
+    session['candidate_id'] = new_candidate.id
+
+    return jsonify({'message': 'Signup successful!', 'candidate_id': new_candidate.id}), 201
 
 
-    return jsonify({'message': 'Signup successful!'}), 201
+@app.route("/debug-session")
+def debug_session():
+    import os
 
+    session_id = request.cookies.get("session")  # This is what Flask gets from the browser
+    session_files = os.listdir("./flask_sessions/")  # Check stored session files
+
+    return {
+        "session_id_from_cookie": session_id,
+        "stored_sessions": session_files,
+        "current_session_data": dict(session)
+    }
+
+
+
+
+
+@app.route("/check-session")
+def check_session():
+    print("Session Data:", session)
+    if "user_id" in session:
+        return jsonify({"message": "Session Active", "user_id": session["user_id"]})
+    return jsonify({"error": "No Active Session"}), 401
+
+
+
+@app.route('/profile', methods=['GET'])
+def profile():
+    
+    if 'candidate_id' not in session:
+        return jsonify({'error': 'User not logged in'}), 401
+    
+
+    candidate = Candidate.query.get(session['candidate_id'])
+    
+    if not candidate:
+        return jsonify({'error': 'Candidate not found'}), 404
+    
+    return jsonify({
+        'full_name': candidate.full_name,
+        'email': candidate.email,
+        'id': candidate.id,
+        'message': 'Profile fetched successfully!'
+    }), 200
 
 
 @app.route('/login',methods=['POST'])
 def login():
+    print("🚀 LOGIN ROUTE HIT!")
+
     data = request.get_json()
+    print("Received login data:", data)
 
     email = data.get('email')
     password = data.get('password')
@@ -134,14 +211,28 @@ def login():
         return jsonify({'error': 'Email and password are required'}), 400
     
     user = Candidate.query.filter_by(email=email).first()
+    print("Queried user:", user)
+
     if not user:
+        
         return jsonify({'error': 'Invalid email or password'}), 401
     
 
     if not check_password_hash(user.password, password):
         return jsonify({'error': 'Invalid email or password'}), 401
     
-    return jsonify({'message': 'Login successful!'}), 200
+    candidate_id = user.id
+    print("Candidate ID being sent:", candidate_id)
+
+
+    
+    session['candidate_id'] = user.id
+    session.modified = True
+
+    
+
+    
+    return jsonify({'message': 'Login successful!','candidate_id': user.id}), 200
 
 
 
@@ -230,40 +321,23 @@ def get_candidate(id):
         'email':user.email
     }),200
 
-##@app.route('/update_candidate/<int:id>', methods=['PUT'])
-##def update_candidate(id):
-    data = request.get_json()
-    user = Candidate.query.get(id)
-
-    if not user:
-        return jsonify({'error': 'Candidate not found'}), 404
-    
-    if 'full_name' in data:
-        user.full_name = data['full_name']
-    if 'email' in data:
-        user.email = data['email']
-
-    db.session.commit()
-
-    return jsonify({
-        'id':user.id,
-        'full_name':user.full_name,
-        'email':user.email
-    }),200
 
 
-##@app.route('/delete_candidate/<int:candidate_id>', methods=['DELETE'])
-##def delete_candidate(candidate_id):
-    user = Candidate.query.get(candidate_id)
-
-    if not user:
-        return jsonify({'error': 'Candidate not found'}), 404
 
 
-    db.session.delete(user)
-    db.session.commit()
+@app.route('/get_name_profile_image/<int:candidate_id>', methods=['GET'])
+def get_name_profile_image(candidate_id):
+     candidate = Candidate.query.get(candidate_id)
+     if not candidate:
+         return jsonify({'error': 'Candidate not found'}), 404
+     
+     verification = Verification.query.filter_by(candidate_id=candidate_id).first()
+     profile_image = verification.profile_image if verification else None
 
-    return jsonify({'message': 'Candidate deleted successfully'}), 200
+     return jsonify({
+         'full_name':candidate.full_name,
+         'profileImage':profile_image
+     }),200
 
 
 @app.route('/get_verifications', methods=['GET'])
@@ -290,8 +364,8 @@ def get_all_verifications():
 
 
 
-@app.route('/verify_candidate_details', methods=['POST'])
-def verify_candidate_details():
+#@app.route('/verify_candidate_details', methods=['POST'])
+#def verify_candidate_details():
     data = request.get_json()
     print("Received data:", data)
 
@@ -322,13 +396,71 @@ def verify_candidate_details():
         return jsonify({'error': 'Candidate verification record not found'}), 404     
     
 
+@app.route('/get_candidate_id/<national_id>', methods=['GET'])
+def get_candidate_id(national_id):
+    candidate = Candidate.query.filter_by(national_id=national_id).first()
+    
+    if not candidate:
+        return jsonify({'error': 'Candidate not found'}), 404
+
+    return jsonify({'candidate_id': candidate.id}), 200 
 
 
 
 
 
-@app.route('/send_otp', methods=['POST'])
-def send_otp():
+
+
+@app.route('/verify_and_send_otp', methods=['POST'])
+
+def verify_and_send_otp():
+    data = request.get_json()
+    print("Received data:", data)
+
+    #candidate_id = data.get('candidate_id')
+    national_id = data.get('national_id')
+    phone_number = data.get('phone_number')
+
+    if not national_id or not phone_number:
+        return jsonify({'error': 'National ID and phone number are required'}), 400
+    
+    verification = Verification.query.filter_by(national_id=national_id).first()
+
+    if not verification:
+        return jsonify({'error': 'Verification record not found'}), 404  
+    
+    candidate_id = verification.candidate_id
+
+    if verification.phone_number != phone_number:
+        return jsonify({'error': 'Phone number does not match records'}), 400
+    
+    if not verification.is_verified:
+        return jsonify({'error': 'Phone number not verified yet.'}), 400
+    
+
+    if not phone_number.startswith('+'):
+        phone_number = '254' + phone_number.lstrip('0')  
+
+
+    try:
+        otp_verification = client.verify.v2.services(TWILIO_VERIFY_SERVICE_SID) \
+        .verifications.create(to=phone_number, channel='sms')
+
+        return jsonify({
+            'message': 'Candidate verified successfully, OTP sent!',
+            'otp_status': otp_verification.status,
+            'candidate_id': candidate_id 
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': 'Verification successful, but OTP sending failed: ' + str(e)}), 500
+
+
+
+
+
+#@app.route('/send_otp', methods=['POST'])
+#def send_otp():
     data = request.get_json()
     phone_number = data.get('phone_number')
 
@@ -369,7 +501,7 @@ def verify_otp():
             verification = Verification.query.filter_by(phone_number=phone_number).first()
 
             if verification:
-                verification.is_phone_verified = True
+                verification.is_verified = True
                 db.session.commit()
                 return jsonify({'message': 'Phone number verified successfully!'}), 200 
         
@@ -381,42 +513,173 @@ def verify_otp():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-        
 
 
 
 
+@app.route('/assign_category', methods=['POST'])
+def assign_category():
 
-
-
-@app.route('/verify_candidate', methods=['POST'])
-def verify_candidate():
+    if 'candidate_id' not in session:
+        return jsonify({'error': 'User not logged in'}), 401
+    
+    candidate_id = session['candidate_id']
     data = request.get_json()
-    candidate_id = data.get('candidate_id')
-    profile_image = data.get('profile_image')
     category = data.get('category')
-    vote_count = data.get(vote_count)
+
+    print(f"Received data from frontend: {data}")
+    print(f"Extracted category: {category}")
+
+
+    print(f"Received candidate_id: {candidate_id}, category: {category}")
+
+    if not category:
+        print("🚨 Category is missing in the request!")
+        return jsonify({'error': 'Category is required'}), 400
+    
 
     candidate = Candidate.query.get(candidate_id)
     if not candidate:
         return jsonify({'error': 'Candidate not found'}), 404
     
-
     verification = Verification.query.filter_by(candidate_id=candidate_id).first()
+    if verification:
+       verification.category = category
 
-    if not verification:
-         return jsonify({'error': 'Candidate verification record not found'}), 404
-    
-    verification.profile_image = profile_image
-    verification.category = category
-    verification.is_verified = True
-    verification.vote_count = 0
+    else:
+         verification = Verification(
+            candidate_id=candidate_id,
+            
+             #phone_number=None,
+             #national_id=None,
+             #profile_image=None,
+             #is_verified=False,
+             #category=category,
+             #vote_count=0 
+
+         )
+         db.session.add(verification)
 
     db.session.commit()
-    return jsonify({'message': 'Candidate verified successfully'}), 200
+    return jsonify({'message': 'Category assigned successfully'}), 200
+
+
+
+
+#@app.route('/assign_category', methods=['POST'])
+#def assign_category():
+    if 'candidate_id' not in session:
+        return jsonify({'error': 'User not logged in'}), 401
+
+    candidate_id = int(session['candidate_id'])  # 🔥 Ensure it's an integer
+    data = request.get_json()
+    category = data.get('category')
+
+    print(f"Received candidate_id: {candidate_id}, category: {category}")
+
+    if not category:
+        return jsonify({'error': 'Category is required'}), 400
+
+    candidate = Candidate.query.get(candidate_id)
+    if not candidate:
+        return jsonify({'error': 'Candidate not found'}), 404
+
+    verification = Verification.query.filter_by(candidate_id=candidate_id).first()
+    if verification:
+        verification.category = category
+    else:
+        verification = Verification(
+            candidate_id=candidate_id,
+            phone_number=None,
+            national_id=None,
+            profile_image=None,
+            is_verified=False,
+            category=category,
+            vote_count=0
+        )
+        db.session.add(verification)
+
+    # 🔥 Debugging SQL Issues
+    try:
+        print(f"SQL Debug: Candidate ID={candidate_id}, Category={category}")
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print("🔥 Error committing to database:", str(e))
+       # traceback.print_exc()  # Show full error
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+    return jsonify({'message': 'Category assigned successfully'}), 200
+
+
+        
+
+@app.route('/verify_candidate', methods=['POST'])
+def verify_candidate():
+    data = request.get_json()
+    candidate_id = data.get('candidate_id')
+
+    print(f"Received candidate_id: {candidate_id}")
+
+    if not candidate_id:
+        return jsonify({'error': 'Candidate ID is required'}), 400
+
+    # Check if candidate exists
+    candidate = Candidate.query.get(candidate_id)
+    if not candidate:
+        return jsonify({'error': 'Candidate not found'}), 404
+
+    # Check if verification already exists
+    verification = Verification.query.filter_by(candidate_id=candidate_id).first()
+    if verification:
+        return jsonify({'error': 'Candidate is already verified'}), 400
+
+    # Create new verification record
+    new_verification = Verification(
+        candidate_id=candidate_id,
+        phone_number=data.get('phone_number'),
+        national_id=data.get('national_id'),
+        profile_image=data.get('profile_image'),
+        is_verified=False,
+        category=data.get('category')
+    )
+
+    db.session.add(new_verification)
+    db.session.commit()
+
+    return jsonify({'message': 'Verification record created successfully'}), 200
+
+
+
+@app.route('/fetch_category/<int:candidate_id>', methods=['GET'])
+def fetch_category(candidate_id):
+    try:
+        
+        verifications = Verification.query.filter_by(candidate_id=candidate_id).all()
+
+        if not verifications:
+            return jsonify({"error": "No verifications found for this candidate"}), 404
+
     
+        categories = list(set([verification.category for verification in verifications]))
+
     
+        candidate = Candidate.query.get(candidate_id)
+        if not candidate:
+            return jsonify({"error": "Candidate not found"}), 404
+
     
+        candidate_data = {"id": candidate.id, "name": candidate.full_name}
+
+        return jsonify({"categories": categories, "candidate": candidate_data}), 200
+
+    except Exception as e:
+        print(f"Error: {e}") 
+        return jsonify({"error": str(e)}), 500
+
+
+    
+
 
 @app.route('/get_single_verification/<int:verification_id>',methods=['GET'])
 def get_single_verification(verification_id):
@@ -494,60 +757,53 @@ def upload_profile_image():
         if not candidate:
             return jsonify({'error': 'Candidate not found'}), 404
         
-        candidate.profile_image = file_path
+        relative_path = f"profile_folder/{filename}"
+        candidate.profile_image = relative_path
         db.session.commit()
 
-        return jsonify({'message': 'Profile image uploaded successfully', 'image_url': file_path}), 200
+        return jsonify({'message': 'Profile image uploaded successfully', 'image_url': f"/uploads/{relative_path}"}), 200
     
     return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400
 
 
-#@app.route('/get_profile_image/<filename>', methods=['GET'])
-##def get_profile_image(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+@app.route('/vote', methods=['POST'])
+def vote():
+    try:
+        # Get the voter phone and candidate ID from the request body
+        voter_phone = request.json.get('voter_phone')
+        candidate_id = request.json.get('candidate_id')
+        category = request.json.get('category')  # Assuming category is passed as well
+        
+        # Check if the candidate exists
+        candidate = Candidate.query.get(candidate_id)
+        if not candidate:
+            return jsonify({'error': 'Candidate not found'}), 404
 
-##@app.route('/vote',methods=['POST'])
-##def vote():
-    data = request.get_json()
-    voter_phone = data.get('voter_phone')
-    candidate_id = data.get('candidate_id')
+        # Find the corresponding verification record for the candidate and category
+        verification = Verification.query.filter_by(candidate_id=candidate.id, category=category).first()
+        if not verification:
+            return jsonify({'error': 'Verification not found for this candidate and category'}), 404
 
+        # Create a new vote entry
+        new_vote = Votes(candidate_id=candidate.id, voter_phone=voter_phone)
 
-    if not voter_phone or not candidate_id:
-        return jsonify({'error': 'Candidate ID and voter phone are required'}), 400
-    
+        # Add the vote to the database
+        db.session.add(new_vote)
 
-    candidate = Candidate.query.get(candidate_id)
-
-    if not candidate:
-        return jsonify({'error': 'Candidate not found'}), 404
-    
-
-    existing_vote = Votes.query.filter_by(voter_phone=voter_phone).first()
-    if existing_vote:
-        return jsonify({'error': 'This phone number has already voted'}), 403
-    
-    new_vote = Votes(candidate_id=candidate_id, voter_phone=voter_phone)
-    db.session.add(new_vote)
-
-    verification = Verification.query.filter_by(candidate_id=candidate_id).first()
-    if verification:
+        # Update the vote count for the verification record
         verification.vote_count += 1
+        db.session.commit()
 
-    db.session.commit()
+        return jsonify({'message': 'Vote recorded successfully', 'vote_count': verification.vote_count}), 200
 
-    return jsonify({
-        'message': 'Vote cast successfully!',
-        'candidate_id': candidate_id,
-        'updated_vote_count': verification.vote_count if verification else "Not tracked"
-    }),200
-
+    except Exception as e:
+        # Return an error if something goes wrong
+        return jsonify({'error': str(e)}), 500
 
 
 
 
-  
 
 @app.route('/delete_unverified_candidates', methods=['DELETE'])
 def delete_unverified_candidates():
@@ -590,26 +846,6 @@ def list_candidates():
         })
     
     return jsonify({'candidates': candidates_list}), 200
-
-
-from sqlalchemy import text
-
-@app.route('/delete_all_candidates', methods=['DELETE'])
-def delete_all_candidates():
-    try:
-        # First, delete all verification records
-        db.session.execute(text("DELETE FROM verification"))
-        
-        # Then, delete all candidates
-        db.session.execute(text("DELETE FROM candidate"))
-        
-        db.session.commit()
-        return jsonify({'message': 'All candidates deleted successfully'}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': 'Failed to delete candidates', 'details': str(e)}), 500
-
-
 
 
 
