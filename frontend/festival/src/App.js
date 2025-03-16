@@ -13,13 +13,23 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Header />} />
-        <Route path="/" element={<KalenjinMusicFestival />} />
+        <Route
+          path="/"
+          element={
+            <>
+              <Header />
+              <KalenjinMusicFestival />
+            </>
+          }
+        />
         <Route path="/signup" element={<SignupForm />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/scrollable-cards" element={<ScrollableCards />} />
-        <Route path="/account-form" element={<ProfilePage />} />
-        <Route path="/verification-form" element={<VerificationForm />} />
+        <Route path="/account-form/:candidateId" element={<ProfilePage />} />
+        <Route
+          path="/verification-form/:candidateId"
+          element={<VerificationForm />}
+        />
       </Routes>
     </Router>
   );
