@@ -9,6 +9,9 @@ function SignupForm() {
     email: "",
     password: "",
 }); 
+
+const [loading, setLoading] = useState(false);
+const [errorMessage, setErrorMessage] = useState("");
   const styles = {
     container: {
       display: "flex",
@@ -69,13 +72,21 @@ function SignupForm() {
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try{
-        const response = await axios.post("http://127.0.0.1:5000/signup", formData);
+        const response = await axios.post("http://127.0.0.1:5000/signup", formData, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         alert(response.data.message);
+
+
 
      navigate("/login");
 } catch (error) {
-    alert(error.response?.data?.error || "Signup failed. Try again!");  
+  setLoading(false);
+  setErrorMessage(error.response?.data?.error || "Signup failed. Try again!");  
 }
   };
 
@@ -83,6 +94,7 @@ function SignupForm() {
     <div style={styles.container}>
       <div style={styles.formContainer}>
         <h2 style={styles.heading}>Signup:</h2>
+        {errorMessage && <p style={styles.errorMessage}>{errorMessage}</p>}
         <form onSubmit={handleSignupSubmit}>
           <input type="text" name="full_name"  placeholder="full-name:" style={styles.inputField} value={formData.full_name} onChange={handleInputChange} required />
           <input type="email" name="email" placeholder="Email:" style={styles.inputField} value={formData.email} onChange={handleInputChange} required />

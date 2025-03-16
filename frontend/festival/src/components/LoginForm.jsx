@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from 'axios';
 
 const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -8,6 +7,24 @@ const LoginForm = () => {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetch("/check-session", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log("Session Data:", data);
+        if (data.user_id) {
+          console.log("User is already logged in with ID:", data.user_id);
+          navigate("/scrollable-cards"); 
+        }
+      })
+      .catch(error => console.error("Error checking session:", error));
+  }, []);
+
+
 
   const styles = {
     container: {
@@ -84,14 +101,35 @@ const LoginForm = () => {
     e.preventDefault();
     if (!validate()) return;
     try {
-        const response = await axios.post("http://127.0.0.1:5000/login", {
-          email,
-          password,
+        const response = await fetch("login", {
+          method:"POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+
         }); 
-        alert(response.data.message);
+
+        const result = await response.json()
+        console.log("Full Response Data:", result);
+        console.log("Candidate ID received from backend:", result.candidate_id);
+
+        if (result.candidate_id) {
+          sessionStorage.setItem("candidate_id", result.candidate_id);
+          console.log("Stored Candidate ID:", result.candidate_id);
+        } else {
+          console.error("Candidate ID is missing in response.");
+        }
+
+        localStorage.setItem("candidateEmail", email);
+
         navigate("/scrollable-cards");
+
+
     } catch (error) {
-        alert(error.response?.data?.error || "Login failed. Try again!");
+      console.error("Login Error:", error);
+        alert("Login failed. Please check your credentials and try again!");
     }
   };
 

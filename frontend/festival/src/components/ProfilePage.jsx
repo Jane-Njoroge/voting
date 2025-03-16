@@ -1,73 +1,83 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React ,{ useState, useEffect } from "react";
+import { useNavigate,useParams } from "react-router-dom";
 import addpro from './addpro.webp'
 import pro1 from './pro1.jpg'
-import { useLocation } from "react-router-dom";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const [name, setName] = useState("");
+  const { candidateId } = useParams();
+  const [name, setName] = useState(null);
   const [votes, setVotes] = useState(0);
   const [profileImage, setProfileImage] = useState(null);
+  const [candidate, setCandidate] = useState({});
+  const [categories, setCategories] = useState([]);
 
-  const location = useLocation();
-  const selectedCategory = location.state?.category || "No category selected";
+  useEffect(() => {
 
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const data = {
-        name: candidateName,
-        category: selectedCategory,
-    };
-
-    try {
-        const response = await fetch("http://your-backend-url.com/api/candidates", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-
-        const result = await response.json();
-      console.log("Success:", result);
-    } catch (error) {
-      console.error("Error sending data:", error);
+    if (!candidateId) {
+      console.error("Candidate ID is missing!");
+      return;
     }
+
+
+    fetch(`http://localhost:5000/get_name_profile_image/${candidateId}`, { credentials: "include" })
+    .then((res) => res.json())
+    .then((data) => {
+      console.log("Candidate Data:", data);
+      if (!data.error){
+        setName(data.full_name);
+        setProfileImage(data.profileImage);
+      }
+    })
+    .catch((error) => console.error("Error fetching candidate details:", error));
+  
+
+
+  fetch(`http://localhost:5000/fetch_category/${candidateId}`, { credentials: "include" })
+  .then(response => response.json())
+  .then(data => {
+    console.log("Category Data:", data);
+    if (data.candidate && data.categories) {
+      setCandidate(data.candidate);
+      setCategories(data.categories);
+    }
+  })
+  
+  .catch((error) => console.error("Error fetching category:", error));
+
+}, [candidateId]);
+ 
+
+
+  const handleImageChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("profile_image", file);
+    try{
+      const response = await fetch("http://localhost:5000/upload_profile_image",{
+        method: "POST",
+        body :formData,
+        credentials: "include",
+      });
+      const data = await response.json();
+      setProfileImage(data.profileImage);
+    } catch (error) {
+      console.error("Error uploading image:",error);
+    }
+    
   };
 
 
 
-  useEffect(() => {
-    fetch("http://localhost:5000/get-profile", {
-        method: "GET",
-        credentials: "include",
-    })
-    .then((res) => res.json())
-    .then((data) => {
-        setName(data.name);
-        setVotes(data.votes);
-        setProfileImage(data.profileImage);
-    })
-    .catch((error) => console.error("Error fetching profile:", error));
-}, []);
-
-const handleImageChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setProfileImage(reader.result);
-        };
-        reader.readAsDataURL(file);
-    }
-};  
-
   return (
     <div style={styles.container}>
-    <p>Selected Category: {selectedCategory}</p>
-      <h2 style={styles.name}>Name: {name}</h2>
-     
+
+{candidate.name && <h2 style={styles.name}>Name: {candidate.name}</h2>}
+
+      
+      {categories.length > 0 && <h3>Category: {categories[0]}</h3>}
+
      <div style={styles.profileIcon} onClick={() => document.getElementById("fileInput").click()}>
       <img 
       src={profileImage || addpro} 
@@ -102,7 +112,7 @@ const handleImageChange = (event) => {
 
 const styles = {
     container: {
-      backgroundColor: "#5c0e0e", // Dark red background
+      backgroundColor: "#5c0e0e",
       color: "white",
       textAlign: "center",
       height: "100vh",
@@ -158,7 +168,7 @@ const styles = {
       transform: "translate(-50%, -50%)",
 
 
-      "@media (max-width: 168px)": {
+      "@media (maxWidth: 168px)": {
         width: "60px",
         height: "60px",
         left: "50%",
