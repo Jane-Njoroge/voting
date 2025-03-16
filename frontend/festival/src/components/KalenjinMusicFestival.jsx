@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function KalenjinMusicFestival() {
-  const navigate = useNavigate(); // Initialize navigate
+  const navigate = useNavigate();
 
   const containerStyle = {
     backgroundColor: '#B31B1B',

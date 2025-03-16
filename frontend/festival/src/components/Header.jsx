@@ -6,12 +6,12 @@ function Header() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Wait for 5 seconds, then navigate to SignupForm
+    
     const timer = setTimeout(() => {
       navigate("/signup");
     }, 5000);
 
-    // Cleanup function to clear the timer if the component unmounts
+    
     return () => clearTimeout(timer);
   }, [navigate]);
 

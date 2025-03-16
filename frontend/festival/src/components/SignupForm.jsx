@@ -86,7 +86,7 @@ const [errorMessage, setErrorMessage] = useState("");
      navigate("/login");
 } catch (error) {
   setLoading(false);
-  setErrorMessage(error.response?.data?.error || "Signup successfully!");  
+  setErrorMessage(error.response?.data?.error || "Signup failed. Try again!");  
 }
   };
 

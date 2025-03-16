@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const cardTexts = [
   "Best Overall Kalenjin Artiste- Secular",
@@ -85,6 +85,7 @@ const ScrollableCards = () => {
 
   return (
     <div style={styles.container}>
+
       <div style={styles.cardsWrapper}>
         {cardTexts.map((text, index) => (
           <div 
