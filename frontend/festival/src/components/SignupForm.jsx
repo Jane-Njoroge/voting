@@ -79,6 +79,13 @@ const handleSignupSubmit = async (e) => {
                 "Content-Type": "application/json",
             },
         });
+        
+        // Store the JWT token in local storage upon successful signup
+        const token = response.data.token;
+        if (token) {
+            localStorage.setItem('token', token);
+        }
+
         alert(response.data.message);
         navigate("/login");
     } catch (error) {

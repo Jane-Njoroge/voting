@@ -53,14 +53,12 @@ const categories = [
   "Legend Award Female",
 ];
 
-// In-memory storage for session state
-const sessions = new Map(); // {sessionId: {phoneNumber, step, category, candidates}}
+const sessions = new Map();
 
 app.post("/api/ussd", async (req, res) => {
   const { sessionId, phoneNumber, text } = req.body;
   let response = "";
 
-  // Improved phone number normalization
   let normalizedPhone = phoneNumber;
   if (!normalizedPhone.startsWith("+")) {
     normalizedPhone = `+254${phoneNumber.replace(/^0/, "")}`;
@@ -88,19 +86,79 @@ app.post("/api/ussd", async (req, res) => {
       const categoryIndex = parseInt(userInput) - 1;
       if (categoryIndex >= 0 && categoryIndex < categories.length) {
         session.category = categories[categoryIndex];
-        const candidates = await axios.get(`${BACKEND_URL}/list_candidates`, {
-          params: { category: session.category },
-        });
-        if (!candidates.data.candidates.length) {
-          response = "END No candidates found for this category";
-        } else {
-          session.candidates = candidates.data.candidates;
+        try {
+          const candidatesResponse = await axios.get(
+            `${BACKEND_URL}/list_candidates`,
+            {
+              params: { category: session.category },
+            }
+          );
+          if (candidatesResponse.status !== 200) {
+            console.error(
+              "Error fetching candidates:",
+              candidatesResponse.statusText
+            );
+            response = `END Failed to fetch candidates. Status: ${candidatesResponse.status}`;
+          } else if (
+            !candidatesResponse.data.candidates ||
+            candidatesResponse.data.candidates.length === 0
+          ) {
+            // Fetch signed-up candidates instead
+            try {
+              const signedUpCandidatesResponse = await axios.get(
+                `${BACKEND_URL}/get_signed_up_candidates`
+              );
+              if (signedUpCandidatesResponse.status === 200) {
+                const signedUpCandidates =
+                  signedUpCandidatesResponse.data.candidates;
+                response =
+                  "CON No candidates found for this category. Here are signed-up candidates:\n" +
+                  signedUpCandidates
+                    .map((candidate, i) => `${i + 1}. ${candidate.full_name}`)
+                    .join("\n");
+              } else {
+                response = "END Failed to fetch signed-up candidates.";
+              }
+            } catch (error) {
+              console.error("Error fetching signed-up candidates:", error);
+              response =
+                "END An error occurred while fetching signed-up candidates.";
+            }
+          } else {
+            session.candidateIds = candidatesResponse.data.candidates.map(
+              (c) => c.id
+            );
+
+            // Fetch candidate names from the profile page
+            const candidateNames = await Promise.all(
+              session.candidateIds.map(async (candidateId) => {
+                try {
+                  const profileResponse = await axios.get(
+                    `${BACKEND_URL}/get_name_profile_image/${candidateId}`
+                  );
+                  return profileResponse.data.full_name;
+                } catch (error) {
+                  console.error(
+                    `Error fetching name for candidate ${candidateId}:`,
+                    error
+                  );
+                  return `Candidate ${candidateId}`; // Default name in case of error
+                }
+              })
+            );
+            session.candidates = candidateNames; // Assign names to session
+
+            response =
+              "CON Select Candidate:\n" +
+              session.candidates
+                .map((name, i) => `${i + 1}. ${name}`)
+                .join("\n");
+            session.step = "vote";
+          }
+        } catch (error) {
+          console.error("Error fetching candidates:", error);
           response =
-            "CON Select Candidate:\n" +
-            session.candidates
-              .map((cand, i) => `${i + 1}. ${cand.full_name}`)
-              .join("\n");
-          session.step = "vote";
+            "END An error occurred while fetching candidates. Try again.";
         }
       } else {
         response = "CON Invalid category. Try again.";
@@ -108,38 +166,51 @@ app.post("/api/ussd", async (req, res) => {
     } else if (session.step === "vote") {
       const candidateIndex = parseInt(userInput) - 1;
       if (candidateIndex >= 0 && candidateIndex < session.candidates.length) {
-        const candidate = session.candidates[candidateIndex];
-        const voteResponse = await axios.post(`${BACKEND_URL}/vote`, {
-          voter_phone: normalizedPhone,
-          candidate_id: candidate.id,
-        });
-        if (voteResponse.status === 200) {
-          response = "END Vote recorded successfully!";
-          session.step = "menu";
-        } else {
-          response = `END ${voteResponse.data.error || "Voting failed."}`;
+        const candidateId = session.candidateIds[candidateIndex];
+        try {
+          const voteResponse = await axios.post(`${BACKEND_URL}/vote`, {
+            voter_phone: normalizedPhone,
+            candidate_id: candidateId,
+          });
+          if (voteResponse.status === 200) {
+            response = "END Vote recorded successfully!";
+            session.step = "menu";
+          } else {
+            response = `END ${voteResponse.data.error || "Voting failed."}`;
+          }
+        } catch (error) {
+          console.error("Error recording vote:", error);
+          response =
+            "END An error occurred while recording your vote. Try again.";
         }
       } else {
         response = "CON Invalid candidate. Try again.";
       }
     } else if (session.step === "menu" && userInput === "2") {
-      const results = await axios.get(`${BACKEND_URL}/get_verifications`);
-      response =
-        "END Voting Results:\n" +
-        categories
-          .map((cat) => {
-            const top = results.data.verifications
-              .filter((v) => v.category === cat)
-              .sort((a, b) => b.vote_count - a.vote_count)[0];
-            return top ? `${cat}: ${top.vote_count} votes` : `${cat}: 0 votes`;
-          })
-          .join("\n");
+      try {
+        const results = await axios.get(`${BACKEND_URL}/get_verifications`);
+        response =
+          "END Voting Results:\n" +
+          categories
+            .map((cat) => {
+              const top = results.data.verifications
+                .filter((v) => v.category === cat)
+                .sort((a, b) => b.vote_count - a.vote_count)[0];
+              return top
+                ? `${cat}: ${top.vote_count} votes`
+                : `${cat}: 0 votes`;
+            })
+            .join("\n");
+      } catch (error) {
+        console.error("Error fetching results:", error);
+        response = "END An error occurred while fetching results. Try again.";
+      }
     } else {
       response = "CON Invalid option.\n1. Vote\n2. Check Results";
       session.step = "menu";
     }
   } catch (error) {
-    console.error("Error:", error);
+    console.error("General Error:", error);
     response = "END An error occurred. Try again.";
   }
 

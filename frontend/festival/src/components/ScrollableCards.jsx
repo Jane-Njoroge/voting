@@ -1,7 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import pro1 from './pro1.jpg'; // Import the icon image
+import { useNavigate, useLocation } from "react-router-dom";
 
 const cardTexts = [
   "Best Overall Kalenjin Artiste- Secular",
@@ -42,45 +40,58 @@ const cardTexts = [
 
 const ScrollableCards = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleIconClick = (category) => {
-    const candidateId = Number(sessionStorage.getItem("candidate_id")) || 0; // Fallback to 0 if not logged in
+  const handleCategoryClick = async (category) => {
+    const candidateId = Number(sessionStorage.getItem("candidate_id"));
 
-    // Attempt to assign category in the background (best effort)
-    if (candidateId) {
-      try {
-        axios.post(
-          "http://127.0.0.1:5000/assign_category",
-          { candidate_id: candidateId, category },
-          { withCredentials: true }
-        ).then(response => {
-          console.log("Category assignment response:", response.data);
-        }).catch(error => {
-          console.error("Error assigning category:", error.response?.data || error.message);
-        });
-      } catch (error) {
-        console.error("Error in category assignment:", error);
-      }
-    } else {
-      console.log("No candidateId found, proceeding without assignment.");
+    if (!candidateId) {
+      alert("Candidate ID is missing. Please log in again.");
+      console.error("Candidate ID not found in sessionStorage.");
+      return;
     }
 
-    // Navigate to ProfilePage with candidateId and category
-    navigate(`/account-form/${candidateId}`, { state: { category } });
+    console.log("Candidate ID Retrieved:", candidateId);
+    console.log("Sending to backend:", { category, candidate_id: candidateId });
+
+    try {
+      const response = await fetch("/assign_category", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ candidate_id: candidateId, category }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Response from backend:", result);
+
+      if (result.message === "Category assigned successfully") {
+        console.log("✅ Navigating to verification page...");
+        navigate(`/profile-page/${candidateId}`, { state: { category } });
+      }
+    } catch (error) {
+      console.error("Error handling category assignment:", error.message);
+    }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.cardsWrapper}>
         {cardTexts.map((text, index) => (
-          <div key={index} style={styles.card}>
-            <span style={styles.link}>{text}</span>
-            <img
-              src={pro1}
-              alt="Profile Icon"
-              style={styles.icon}
-              onClick={() => handleIconClick(text)}
-            />
+          <div
+            key={index}
+            style={styles.card}
+            onClick={() => handleCategoryClick(text)}
+          >
+            <span href="#" style={styles.link}>
+              {text}
+            </span>
           </div>
         ))}
       </div>
@@ -112,22 +123,11 @@ const styles = {
     fontSize: "18px",
     fontWeight: "bold",
     color: "white",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    position: "relative",
+    cursor: "pointer",
   },
   link: {
     textDecoration: "none",
     color: "white",
-    flexGrow: 1,
-  },
-  icon: {
-    width: "40px",
-    height: "40px",
-    borderRadius: "50%",
-    cursor: "pointer",
-    marginLeft: "10px",
   },
 };
 
