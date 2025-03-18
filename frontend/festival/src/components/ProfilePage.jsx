@@ -20,11 +20,13 @@ const ProfilePage = () => {
     const fetchData = async () => {
       try {
         const nameProfileResponse = await axios.get(
-          `/get_my_profile/${candidateId}`,
+          `/get_my_profile`,
           { withCredentials: true }
         );
         setName(nameProfileResponse.data.full_name || "Unknown Name");
         setProfileImage(nameProfileResponse.data.profileImage || null);
+        // Get category from API response
+        setCategory(nameProfileResponse.data.category || "");
       } catch (error) {
         console.error("Error fetching profile data:", error);
         setName("Error loading name");
@@ -53,7 +55,7 @@ const ProfilePage = () => {
     } else {
       setIsLoading(false);
     }
-  }, [candidateId]);
+  }, [candidateId, state?.category]); // Add category to dependencies
 
   const handleImageChange = async (event) => {
     const file = event.target.files[0];
@@ -68,7 +70,6 @@ const ProfilePage = () => {
         formData,
         { withCredentials: true }
       );
-      // Update the profile image state here
       setProfileImage(response.data.profileImage);
     } catch (error) {
       console.error("Error uploading image:", error);
@@ -83,14 +84,20 @@ const ProfilePage = () => {
     <div style={{
       ...styles.container,
       backgroundImage: `url(${grunge})`, 
-      // backgroundColor: 'maroon' 
     }}>
-      <h2 style={styles.name}>Name: {name}</h2>
-      <h3 style={styles.category}>category:{category}</h3>
-      {category && <h3 style={styles.category}>Category: {category}</h3>}
-      <div style={styles.profileIcon} onClick={() => document.getElementById('fileInput').click()}>
-        <img src={profileImage ? `/static/${profileImage}` : addpro} alt="Profile" style={styles.profileImage} />
+      <div style={styles.headerSection}>
+        <h2 style={styles.name}>Name: {name}</h2>
+        <h3 style={styles.category}>Category: {category || "Not selected"}</h3>
       </div>
+
+      <div style={styles.profileIcon} onClick={() => document.getElementById('fileInput').click()}>
+        <img 
+          src={profileImage ? `/static/${profileImage}` : addpro} 
+          alt="Profile" 
+          style={styles.profileImage} 
+        />
+      </div>
+
       <input
         type="file"
         id="fileInput"
@@ -98,8 +105,13 @@ const ProfilePage = () => {
         onChange={handleImageChange}
         style={{ display: 'none' }}
       />
+
       <p style={styles.votes}>Votes: {votes}</p>
-      <div style={styles.profileIcon} onClick={() => navigate(`/verification-form/${candidateId}`)}>
+
+      <div 
+        style={styles.accountIcon} 
+        onClick={() => navigate(`/verification-form/${candidateId}`)}
+      >
         <img src={pro1} alt="Account" style={styles.accountImage} />
       </div>
     </div>
@@ -118,47 +130,70 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative'
+    position: 'relative',
+    padding: '20px'
+  },
+  headerSection: {
+    position: 'absolute',
+    top: '20px',
+    width: '100%',
+    padding: '0 20px'
   },
   name: {
-    fontSize: '1.5rem',
-    marginBottom: '10px',
-    position: 'absolute',
-    top: '20px'
+    fontSize: '1.8rem',
+    margin: '0 0 10px 0',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    maxWidth: '90vw',
   },
   category: {
-    fontSize: '1.2rem',
-    marginBottom: '20px',
-    position: 'absolute',
-    top: '60px'
+    fontSize: '1.4rem',
+    margin: 0,
+    color: '#ffd700',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    maxWidth: '90vw',
   },
   votes: {
-    fontSize: '1.2rem',
+    fontSize: '1.4rem',
     position: 'absolute',
-    bottom: '20px',
-    left: '20px'
+    bottom: '30px',
+    left: '30px',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: '10px 20px',
+    borderRadius: '5px'
   },
   profileIcon: {
-    width: '150px',
-    height: '150px',
-    backgroundColor: 'transparent',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
+    width: '200px',
+    height: '200px',
+    borderRadius: '50%',
+    border: '4px solid white',
+    overflow: 'hidden',
+    cursor: 'pointer',
+    marginTop: '60px'
   },
   profileImage: {
     width: '100%',
     height: '100%',
-    borderRadius: '50%'
+    objectFit: 'cover'
+  },
+  accountIcon: {
+    position: 'absolute',
+    bottom: '30px',
+    right: '30px',
+    cursor: 'pointer',
+    transition: 'transform 0.3s ease',
+    ':hover': {
+      transform: 'scale(1.1)'
+    }
   },
   accountImage: {
     width: '80px',
     height: '80px',
     borderRadius: '50%',
-    position: 'absolute',
-    bottom: '20px',
-    right: '20px',
-    cursor: 'pointer'
+    border: '2px solid white'
   }
 };
 
