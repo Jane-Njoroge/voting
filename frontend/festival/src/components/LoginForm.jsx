@@ -13,12 +13,13 @@ const LoginForm = () => {
         const checkSession = async () => {
             try {
               const token = localStorage.getItem("token");
+              console.log("Token from localStorage:", token);
 
               if(!token){
                 console.log("No token found. User not logged in.");
                 return;
               }
-                const response = await axios.get("http://127.0.0.1:5000/check-session",{
+                const response = await axios.post("http://127.0.0.1:5000/check-session",{
                   withCredentials: true,
                   headers: { 
                     "Authorization": `Bearer ${token}` 
@@ -30,9 +31,7 @@ const LoginForm = () => {
                 if (response.data.user_id) {
                     console.log("User is already logged in with ID:", response.data.user_id);
                     navigate("/scrollable-cards");
-                } else {
-                  console.log("Token is invalid or session expired.");
-                }
+                } 
             } catch (error) {
                 console.error("Error checking session:", error.message);
             }

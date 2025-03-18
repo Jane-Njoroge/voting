@@ -125,19 +125,25 @@ def home():
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()
+
     full_name = data.get('full_name')
     email = data.get('email')
     password = data.get('password')
 
+
     if not full_name or not email or not password:
         return jsonify({'error': 'All fields are required'}), 400
+
 
     existing_user = Candidate.query.filter_by(email=email).first()
     if existing_user:
         return jsonify({'error': 'User already exists, please log in'}), 400
     
     hashed_password = generate_password_hash(password)
+    
     new_candidate = Candidate(full_name=full_name, email=email, password=hashed_password)
+
+
     db.session.add(new_candidate)
     db.session.commit()
 
@@ -146,64 +152,26 @@ def signup():
     return jsonify({'message': 'Signup successful!','token': access_token, 'candidate_id': new_candidate.id}), 201
 
 
-#@app.route("/debug-session")
-#def debug_session():
-    import os
-
-    session_id = request.cookies.get("session")  # This is what Flask gets from the browser
-    session_files = os.listdir("./flask_sessions/")  # Check stored session files
-
-    return {
-        "session_id_from_cookie": session_id,
-        "stored_sessions": session_files,
-        "current_session_data": dict(session)
-    }
 
 
-
-
-
-#@app.route("/check-session", methods=['GET'])
-#@jwt_required()
-#def check_session():
-    user = get_jwt_identity()
-    return jsonify({"message": "Session valid", "user": user}), 200
-
-
-
-#@app.route('/profile', methods=['GET'])
-#def profile():
-    
-    if 'candidate_id' not in session:
-        return jsonify({'error': 'User not logged in'}), 401
-    
-
-    candidate = Candidate.query.get(session['candidate_id'])
-    
-    if not candidate:
-        return jsonify({'error': 'Candidate not found'}), 404
-    
-    return jsonify({
-        'full_name': candidate.full_name,
-        'email': candidate.email,
-        'id': candidate.id,
-        'message': 'Profile fetched successfully!'
-    }), 200
-
-@app.route("/check-session", methods=["GET"])
+@app.route("/check-session", methods=["GET","POST"])
 @jwt_required()
 def check_session():
-   try:
-      auth_header = request.headers.get("Authorization")
-      if not auth_header:
-          return jsonify({"error": "Authorization header missing"}), 400 
+    try:
+        print("Headers received:", request.headers)  
+
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return jsonify({"error": "Authorization header missing"}), 400 
         
-      user_id = get_jwt_identity()
-      return jsonify({"user_id": user_id, "message": "Session is active"}), 200
-   
-   except Exception as e:
-       return jsonify({"error": str(e)}), 401
-   
+        user_id = get_jwt_identity()
+        return jsonify({"user_id": user_id, "message": "Session is active"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 401
+
+
+
 
 
 
@@ -483,6 +451,7 @@ def verify_otp():
 
 
 
+
 @app.route('/assign_category', methods=['POST'])
 def assign_category():
 
@@ -528,80 +497,10 @@ def assign_category():
          )
          db.session.add(verification)
 
-# @app.route('/get_name_profile_image/<int:candidate_id>', methods=['GET'])
-# def get_name_profile_image(candidate_id):
-#     if 'candidate_id' not in session:
-#         return jsonify({'error': 'User not logged in'}), 401
-
-#     candidate = Candidate.query.get(candidate_id)
-#     if not candidate or candidate.id != session['candidate_id']:
-#         return jsonify({'error': 'Candidate not found or unauthorized'}), 404
-
-#     verification = Verification.query.filter_by(candidate_id=candidate_id).first()
-#     profile_image = verification.profile_image if verification and verification.profile_image != 'default.jpg' else None
-
-#     return jsonify({
-#         'full_name': candidate.full_name,
-#         'profileImage': profile_image
-#     }), 200
-
-@app.route('/upload_profile_image/<int:candidate_id>', methods=['POST'])
-def upload_profile_image(candidate_id):
-    if 'candidate_id' not in session or session['candidate_id'] != candidate_id:
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    if 'profile_image' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-
-    file = request.files['profile_image']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-
-    if file and allowed_file(file.filename):
-        filename = secure_filename(f"{candidate_id}_{file.filename}")
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-
-        verification = Verification.query.filter_by(candidate_id=candidate_id).first()
-        if not verification:
-            verification = Verification(candidate_id=candidate_id, phone_number='', national_id='', profile_image=filename)
-            db.session.add(verification)
-        else:
-            # Remove old image if it exists and isn't default
-            if verification.profile_image and verification.profile_image != 'default.jpg':
-                old_file_path = os.path.join(app.config['UPLOAD_FOLDER'], verification.profile_image)
-                if os.path.exists(old_file_path):
-                    os.remove(old_file_path)
-            verification.profile_image = filename
-        db.session.commit()
-
-        return jsonify({'message': 'Image uploaded successfully', 'profileImage': filename}), 200
-    return jsonify({'error': 'Invalid file type'}), 400
-
-
-@app.route('/candidate/<int:candidate_id>/votes', methods=['GET'])
-def get_candidate_votes(candidate_id):
-    verification = Verification.query.filter_by(candidate_id=candidate_id).first()
-    if not verification:
-        return jsonify({'vote_count': 0}), 200
-    return jsonify({'vote_count': verification.vote_count}), 200
-
-@app.route('/delete_profile_image/<int:candidate_id>', methods=['DELETE'])
-def delete_profile_image(candidate_id):
-    if 'candidate_id' not in session or session['candidate_id'] != candidate_id:
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    verification = Verification.query.filter_by(candidate_id=candidate_id).first()
-    if not verification or not verification.profile_image or verification.profile_image == 'default.jpg':
-        return jsonify({'message': 'No profile image to delete'}), 200
-
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], verification.profile_image)
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-    verification.profile_image = 'default.jpg'
     db.session.commit()
-    return jsonify({'message': 'Profile image deleted successfully'}), 200
+
+    print(f"Successfully assigned category: {verification.category}")
+    return jsonify({'message': 'Category assigned successfully'}), 200
 
 
 
