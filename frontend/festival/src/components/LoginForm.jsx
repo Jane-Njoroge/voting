@@ -12,12 +12,26 @@ const LoginForm = () => {
     useEffect(() => {
         const checkSession = async () => {
             try {
-                const response = await axios.get("http://127.0.0.1:5000/check-session", {
-                    withCredentials: true
+              const token = localStorage.getItem("token");
+
+              if(!token){
+                console.log("No token found. User not logged in.");
+                return;
+              }
+                const response = await axios.get("http://127.0.0.1:5000/check-session",{
+                  withCredentials: true,
+                  headers: { 
+                    "Authorization": `Bearer ${token}` 
+                  }
+                  
                 });
+                console.log("Session Response:", response.data);
+
                 if (response.data.user_id) {
                     console.log("User is already logged in with ID:", response.data.user_id);
                     navigate("/scrollable-cards");
+                } else {
+                  console.log("Token is invalid or session expired.");
                 }
             } catch (error) {
                 console.error("Error checking session:", error.message);
@@ -102,14 +116,16 @@ const LoginForm = () => {
     if (!validate()) return;
 
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:5000/login",
+      const response = await axios.post("/login",
         { email, password },
         { withCredentials: true }
       );
 
-      const { candidate_id } = response.data;
-      sessionStorage.setItem("candidate_id", candidate_id);
+      const token = response.data.token;
+      if (!token) throw new Error("No token received from server");
+
+
+      localStorage.setItem("token", token);
       localStorage.setItem("candidateEmail", email);
       navigate("/scrollable-cards");
       alert("Login successful!");
