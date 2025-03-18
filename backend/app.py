@@ -15,22 +15,20 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Configuration
+# Configuration (unchanged)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://van:1234@localhost/voting_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', secrets.token_hex(16))
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = os.path.join(os.getcwd(), 'flask_sessions')
-app.config['SESSION_COOKIE_SECURE'] = False  # False for local dev, True for HTTPS production
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Lax works for most cross-origin requests
-app.config['SESSION_COOKIE_NAME'] = 'session'  # Explicit name for clarity
-app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour session lifetime
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_NAME'] = 'session'
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600
 
-# Ensure session directory exists
 os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
 
-# Flask-Mail, Twilio, Uploads (unchanged)
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
@@ -84,49 +82,28 @@ class Votes(db.Model):
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Existing Routes (unchanged)
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()
-
     full_name = data.get('full_name')
     email = data.get('email')
     password = data.get('password')
 
-
     if not full_name or not email or not password:
         return jsonify({'error': 'All fields are required'}), 400
-
 
     existing_user = Candidate.query.filter_by(email=email).first()
     if existing_user:
         return jsonify({'error': 'User already exists, please log in'}), 400
     
     hashed_password = generate_password_hash(password)
-    
     new_candidate = Candidate(full_name=full_name, email=email, password=hashed_password)
-
-
     db.session.add(new_candidate)
     db.session.commit()
     session['candidate_id'] = new_candidate.id
-
     return jsonify({'message': 'Signup successful!', 'candidate_id': new_candidate.id}), 201
-
-
-@app.route("/debug-session")
-def debug_session():
-    import os
-
-    session_id = request.cookies.get("session")  
-    session_files = os.listdir("./flask_sessions/")  
-
-    return {
-        "session_id_from_cookie": session_id,
-        "stored_sessions": session_files,
-        "current_session_data": dict(session)
-    }
-
-
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -153,7 +130,6 @@ def check_session():
         return jsonify({'message': 'Session active', 'user_id': session['candidate_id']}), 200
     return jsonify({'error': 'No active session'}), 401
 
-
 @app.route('/assign_category', methods=['POST'])
 def assign_category():
     data = request.get_json()
@@ -163,7 +139,6 @@ def assign_category():
     if not all([candidate_id, category]):
         return jsonify({'error': 'Candidate ID and category are required'}), 400
 
-  
     verification = Verification.query.filter_by(candidate_id=candidate_id).first()
     if not verification:
         verification = Verification(candidate_id=candidate_id, phone_number='', national_id='', category=category)
@@ -171,73 +146,100 @@ def assign_category():
     else:
         verification.category = category
     db.session.commit()
-
     return jsonify({'message': 'Category assigned successfully'}), 200
 
-@app.route('/get_logged_in_user', methods=['GET'])
-def get_logged_in_user():
-    if 'user_id' in session:
-       
-        user_details = fetch_user_details_from_db(session['user_id'])
-        return jsonify({'full_name': user_details['full_name']})
-    else:
-        return jsonify({'error': 'User not logged in'}), 401
-
-def fetch_user_details_from_db(user_id):
-   
-    pass
-
-@app.route('/get_name_profile_image/<int:candidate_id>', methods=['GET'])
-def get_name_profile_image(candidate_id):
+# Add this new route to fetch the logged-in candidate's profile
+@app.route('/get_my_profile', methods=['GET'])
+def get_my_profile():
     if 'candidate_id' not in session:
         return jsonify({'error': 'User not logged in'}), 401
 
-    candidate = Candidate.query.get(candidate_id)
-    if not candidate or candidate.id != session['candidate_id']:
-        return jsonify({'error': 'Candidate not found or unauthorized'}), 404
+    candidate = Candidate.query.get(session['candidate_id'])
+    if not candidate:
+        return jsonify({'error': 'Candidate not found'}), 404
 
-    verification = Verification.query.filter_by(candidate_id=candidate_id).first()
-    profile_image = verification.profile_image if verification else None
+    verification = Verification.query.filter_by(candidate_id=session['candidate_id']).first()
+    profile_image = verification.profile_image if verification and verification.profile_image != 'default.jpg' else None
 
     return jsonify({
         'full_name': candidate.full_name,
         'profileImage': profile_image
     }), 200
 
+# @app.route('/get_name_profile_image/<int:candidate_id>', methods=['GET'])
+# def get_name_profile_image(candidate_id):
+#     if 'candidate_id' not in session:
+#         return jsonify({'error': 'User not logged in'}), 401
+
+#     candidate = Candidate.query.get(candidate_id)
+#     if not candidate or candidate.id != session['candidate_id']:
+#         return jsonify({'error': 'Candidate not found or unauthorized'}), 404
+
+#     verification = Verification.query.filter_by(candidate_id=candidate_id).first()
+#     profile_image = verification.profile_image if verification and verification.profile_image != 'default.jpg' else None
+
+#     return jsonify({
+#         'full_name': candidate.full_name,
+#         'profileImage': profile_image
+#     }), 200
+
+@app.route('/upload_profile_image/<int:candidate_id>', methods=['POST'])
+def upload_profile_image(candidate_id):
+    if 'candidate_id' not in session or session['candidate_id'] != candidate_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    if 'profile_image' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['profile_image']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(f"{candidate_id}_{file.filename}")
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+
+        verification = Verification.query.filter_by(candidate_id=candidate_id).first()
+        if not verification:
+            verification = Verification(candidate_id=candidate_id, phone_number='', national_id='', profile_image=filename)
+            db.session.add(verification)
+        else:
+            # Remove old image if it exists and isn't default
+            if verification.profile_image and verification.profile_image != 'default.jpg':
+                old_file_path = os.path.join(app.config['UPLOAD_FOLDER'], verification.profile_image)
+                if os.path.exists(old_file_path):
+                    os.remove(old_file_path)
+            verification.profile_image = filename
+        db.session.commit()
+
+        return jsonify({'message': 'Image uploaded successfully', 'profileImage': filename}), 200
+    return jsonify({'error': 'Invalid file type'}), 400
 
 
-@app.route('/get_votes', methods=['GET'])
-def get_votes():
-    votes = Votes.query.all()
-    votes_list = [
-        {
-            "id": v.id,
-            "candidate_id": v.candidate_id,
-            "voter_phone": v.voter_phone
-        }
-        for v in votes
-    ]
-    return jsonify({"votes": votes_list}), 200
+@app.route('/candidate/<int:candidate_id>/votes', methods=['GET'])
+def get_candidate_votes(candidate_id):
+    verification = Verification.query.filter_by(candidate_id=candidate_id).first()
+    if not verification:
+        return jsonify({'vote_count': 0}), 200
+    return jsonify({'vote_count': verification.vote_count}), 200
 
+@app.route('/delete_profile_image/<int:candidate_id>', methods=['DELETE'])
+def delete_profile_image(candidate_id):
+    if 'candidate_id' not in session or session['candidate_id'] != candidate_id:
+        return jsonify({'error': 'Unauthorized'}), 401
 
-@app.route('/ussd_vote', methods=['POST'])
-def ussd_vote():
-    data = request.get_json()
-    voter_phone = data.get('voter_phone')
-    candidate_id = data.get('candidate_id')
+    verification = Verification.query.filter_by(candidate_id=candidate_id).first()
+    if not verification or not verification.profile_image or verification.profile_image == 'default.jpg':
+        return jsonify({'message': 'No profile image to delete'}), 200
 
-    if not voter_phone or not candidate_id:
-        return jsonify({'error': 'Voter phone and candidate ID are required'}), 400
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], verification.profile_image)
+    if os.path.exists(file_path):
+        os.remove(file_path)
 
-    existing_vote = Votes.query.filter_by(voter_phone=voter_phone).first()
-    if existing_vote:
-        return jsonify({'error': 'Voter has already voted'}), 400
-
-    new_vote = Votes(voter_phone=voter_phone, candidate_id=candidate_id)
-    db.session.add(new_vote)
+    verification.profile_image = 'default.jpg'
     db.session.commit()
-
-    return jsonify({'message': 'Vote recorded successfully'}), 200
+    return jsonify({'message': 'Profile image deleted successfully'}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)

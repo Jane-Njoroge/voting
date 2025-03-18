@@ -8,7 +8,6 @@ dotenv.config();
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 
-// Africa's Talking configuration
 const africasTalking = AfricasTalking({
   apiKey: process.env.AFRICASTALKING_API_KEY,
   username: process.env.AFRICASTALKING_USERNAME,

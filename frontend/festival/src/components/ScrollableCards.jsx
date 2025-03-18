@@ -41,69 +41,72 @@ const cardTexts = [
 const ScrollableCards = () => {
   const navigate = useNavigate();
   const location = useLocation();
+   
 
-  const handleCategoryClick = async (category) => {
-    const candidateId = Number(sessionStorage.getItem("candidate_id"));
+ const handleCategoryClick = async (category) => {
 
-    if (!candidateId) {
-      alert("Candidate ID is missing. Please log in again.");
-      console.error("Candidate ID not found in sessionStorage.");
-      return;
-    }
+  const candidateId = Number(sessionStorage.getItem("candidate_id"));
 
-    console.log("Candidate ID Retrieved:", candidateId);
-    console.log("Sending to backend:", { category, candidate_id: candidateId });
+if (!candidateId) {
+  alert("Candidate ID is missing. Please log in again.");
+  console.error(" Candidate ID not found in sessionStorage.");
+  return;
+}
 
-    try {
-      const response = await fetch("/assign_category", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ candidate_id: candidateId, category }),
-        credentials: "include",
-      });
+console.log("Candidate ID Retrieved:", candidateId);
+console.log("Sending to backend:", { category, candidate_id: candidateId });
 
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
+try {
 
-      const result = await response.json();
-      console.log("Response from backend:", result);
+  const response = await fetch("/assign_category", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ candidate_id: candidateId, category }),
+    credentials: "include",
+  });
 
-      if (result.message === "Category assigned successfully") {
-        console.log("✅ Navigating to verification page...");
-        navigate(`/profile-page/${candidateId}`, { state: { category } });
-      }
-    } catch (error) {
-      console.error("Error handling category assignment:", error.message);
-    }
+  if (!response.ok) {
+    throw new Error(`Server error: ${response.status}`);
+  }
+
+  const result = await response.json();
+  console.log("Response from backend:", result);
+
+  if (result.message === "Category assigned successfully") {
+    console.log("✅ Navigating to verification page...");
+    navigate(`/profile-page/${candidateId}`);
+
+  }
+} catch (error) {
+  console.error("Error handling category assignment:", error.message);
+}
   };
 
   return (
     <div style={styles.container}>
-      <div style={styles.cardsWrapper}>
-        {cardTexts.map((text, index) => (
-          <div
-            key={index}
-            style={styles.card}
-            onClick={() => handleCategoryClick(text)}
-          >
-            <span href="#" style={styles.link}>
-              {text}
-            </span>
-          </div>
-        ))}
+
+  <div style={styles.cardsWrapper}>
+    {cardTexts.map((text, index) => (
+      <div 
+        key={index} 
+        style={styles.card}
+        onClick={() => handleCategoryClick(text)}
+      >
+        <span href="#" style={styles.link}>{text}</span>
       </div>
-    </div>
+    ))}
+  </div>
+</div>
   );
 };
 
 const styles = {
   container: {
     width: "100%",
-    maxHeight: "500px",
-    overflowY: "auto",
+    maxHeight: "500px", 
+    overflowY: "auto", 
     padding: "20px",
     display: "flex",
     flexDirection: "column",
@@ -111,16 +114,16 @@ const styles = {
   },
   cardsWrapper: {
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "column", 
     gap: "20px",
   },
   card: {
     backgroundColor: "darkred",
-    padding: "30px",
+    padding: "30px", 
     borderRadius: "15px",
     minWidth: "250px",
     textAlign: "center",
-    fontSize: "18px",
+    fontSize: "18px", 
     fontWeight: "bold",
     color: "white",
     cursor: "pointer",

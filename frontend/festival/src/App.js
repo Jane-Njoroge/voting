@@ -25,7 +25,7 @@ function App() {
         <Route path="/signup" element={<SignupForm />} />
         <Route path="/login" element={<LoginForm />} />
         <Route path="/scrollable-cards" element={<ScrollableCards />} />
-        <Route path="/account-form/:candidateId" element={<ProfilePage />} />
+        <Route path="/profile-page/:candidateId" element={<ProfilePage />} />
         <Route
           path="/verification-form/:candidateId"
           element={<VerificationForm />}
