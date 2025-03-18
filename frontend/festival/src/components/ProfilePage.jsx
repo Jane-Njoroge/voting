@@ -86,6 +86,7 @@ const ProfilePage = () => {
       // backgroundColor: 'maroon' 
     }}>
       <h2 style={styles.name}>Name: {name}</h2>
+      <h3 style={styles.category}>category:{category}</h3>
       {category && <h3 style={styles.category}>Category: {category}</h3>}
       <div style={styles.profileIcon} onClick={() => document.getElementById('fileInput').click()}>
         <img src={profileImage ? `/static/${profileImage}` : addpro} alt="Profile" style={styles.profileImage} />

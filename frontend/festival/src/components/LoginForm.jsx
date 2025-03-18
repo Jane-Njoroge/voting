@@ -109,30 +109,58 @@ const LoginForm = () => {
     }
     return isValid;
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-
+  
     try {
-      const response = await axios.post("/login",
-        { email, password },
+      const response = await axios.post("/login", 
+        { email, password }, 
         { withCredentials: true }
       );
-
-      const token = response.data.token;
+  
+      const { token, user } = response.data;
       if (!token) throw new Error("No token received from server");
-
-
+  
       localStorage.setItem("token", token);
       localStorage.setItem("candidateEmail", email);
-      navigate("/scrollable-cards");
+      sessionStorage.setItem("candidate_id", user.id);
+      console.log("Login response:", response.data);
+      console.log("Stored candidate_id:", user.id);
+  
+      navigate("/scrollable-cards", { state: { candidateId: user.id } }); // Pass candidateId via state
       alert("Login successful!");
     } catch (error) {
       console.error("Login Error:", error);
       alert(error.response?.data?.error || "Login failed. Please check your credentials!");
     }
   };
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   if (!validate()) return;
+  
+  //   try {
+  //     const response = await axios.post("/login", 
+  //       { email, password }, 
+  //       { withCredentials: true }
+  //     );
+  
+  //     const { token, user } = response.data; // Destructure token and user
+  //     if (!token) throw new Error("No token received from server");
+  
+  //     localStorage.setItem("token", token);
+  //     localStorage.setItem("candidateEmail", email); // Keep this if you need email later
+  //     sessionStorage.setItem("candidate_id", user.id); // Store candidate_id
+  //     console.log("Login response:", response.data); // Debug response
+  //     console.log("Stored candidate_id:", user.id); // Debug storage
+  
+  //     navigate("/scrollable-cards"); // Keep your route name
+  //     alert("Login successful!");
+  //   } catch (error) {
+  //     console.error("Login Error:", error);
+  //     alert(error.response?.data?.error || "Login failed. Please check your credentials!");
+  //   }
+  // };
 
   return (
     <div style={styles.container}>

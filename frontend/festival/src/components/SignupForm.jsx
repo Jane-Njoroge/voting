@@ -74,7 +74,7 @@ const handleSignupSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-        const response = await axios.post("http://127.0.0.1:5000/signup", formData, {
+        const response = await axios.post("/signup", formData, {
             headers: {
                 "Content-Type": "application/json",
             },
