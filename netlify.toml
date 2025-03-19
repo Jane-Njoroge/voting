@@ -1,7 +1,7 @@
 [build]
-  base = "frontend"
-  publish = "frontend/build"
-  command = "npm install && npm run build"
+  base = ""  # No subfolder, since everything is in the root
+  publish = "build"  # The folder Netlify deploys after building
+  command = "npm install && npm run build"  # Build the project
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "20"  # Ensure correct Node.js version
