@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: voting-backend
+    env: python
+    repo: https://github.com/Jane-Njoroge/voting.git
+    buildCommand: |
+      apt-get update && apt-get install -y python3-brlapi
+      pip install -r backend/requirements.txt
+    startCommand: "gunicorn -w 4 -b 0.0.0.0:8000 app:app"
+    region: oregon
