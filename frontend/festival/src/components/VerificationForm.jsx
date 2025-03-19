@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useParams,useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const VerificationPage = () => {
@@ -18,7 +18,7 @@ const VerificationPage = () => {
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:5000/verify_and_send_otp",
+    "/verify_and_send_otp",
         { candidate_id: candidateId, national_id: idNumber, phone_number: phoneNumber },
         { withCredentials: true }
       );
@@ -35,14 +35,14 @@ const VerificationPage = () => {
   const verifyOTP = async () => {
     try {
       const response = await axios.post(
-        "http://127.0.0.1:5000/verify_otp",
+        "/verify_otp",
         { phone_number: phoneNumber, otp: enteredOTP },
         { withCredentials: true }
       );
 
       if (response.data.message) {
         alert("Phone number verified!");
-        navigate(`/account-form/${candidateId}`);
+        navigate(`/profile-page/${candidateId}`);
       }
     } catch (error) {
       alert(error.response?.data?.error || "Invalid OTP.");
@@ -94,6 +94,7 @@ const VerificationPage = () => {
     </div>
   );
 };
+
 const styles = {
   container: {
     display: "flex",
