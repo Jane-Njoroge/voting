@@ -20,7 +20,7 @@ cliapp==1.0.9
 click==8.1.8
 # cmdtest==0.32+git
 colorama==0.4.3
-command-not-found==0.3
+# command-not-found==0.3
 cryptography==2.8
 cupshelpers==1.0
 dbus-python==1.2.16
