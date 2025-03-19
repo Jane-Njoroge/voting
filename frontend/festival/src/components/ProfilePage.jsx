@@ -36,7 +36,7 @@ const ProfilePage = () => {
     const fetchVotes = async () => {
       try {
         const votesResponse = await axios.get(
-          `/candidate/${candidateId}/votes`,
+          `http://127.0.0.1:5000/candidate/${candidateId}/votes`,
           { withCredentials: true }
         );
         setVotes(votesResponse.data.vote_count || 0);
