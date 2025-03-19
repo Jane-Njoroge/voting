@@ -29,7 +29,7 @@ distlib==0.3.0
 distro==1.4.0
 # distro-info==0.23+ubuntu1.1
 Django==4.2.19
-duplicity==0.8.12.0
+# duplicity==0.8.12.0
 entrypoints==0.3
 fasteners==0.14.1
 filelock==3.0.12
