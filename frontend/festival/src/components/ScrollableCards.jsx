@@ -58,7 +58,7 @@ console.log("Sending to backend:", { category, candidate_id: candidateId });
 
 try {
 
-  const response = await fetch("http://127.0.0.1:5000/assign_category", {
+  const response = await fetch("/assign_category", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -75,7 +75,7 @@ try {
   console.log("Response from backend:", result);
 
   if (result.message === "Category assigned successfully") {
-    console.log("✅ Navigating to verification page...");
+    console.log(" Navigating to verification page...");
     navigate(`/profile-page/${candidateId}`, {
       state: {category: category}
     });
