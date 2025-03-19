@@ -20,12 +20,12 @@ const ProfilePage = () => {
     const fetchData = async () => {
       try {
         const nameProfileResponse = await axios.get(
-          `/get_my_profile`,
+          `/get_name_profile_image/${candidateId}`,
           { withCredentials: true }
         );
         setName(nameProfileResponse.data.full_name || "Unknown Name");
         setProfileImage(nameProfileResponse.data.profileImage || null);
-        // Get category from API response
+        
         setCategory(nameProfileResponse.data.category || "");
       } catch (error) {
         console.error("Error fetching profile data:", error);
@@ -47,22 +47,26 @@ const ProfilePage = () => {
     };
 
     if (candidateId !== '0') {
-      Promise.all([fetchData(), fetchVotes()])
-        .then(() => setIsLoading(false))
+     Promise.all([fetchData(), fetchVotes()])
+       .then(() => setIsLoading(false))
         .catch(() => setIsLoading(false));
       const intervalId = setInterval(fetchVotes, 5000);
       return () => clearInterval(intervalId);
     } else {
-      setIsLoading(false);
+     setIsLoading(false);
     }
-  }, [candidateId, state?.category]); // Add category to dependencies
+ }, [candidateId, state?.category]); 
 
   const handleImageChange = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    console.log("Selected file:", file);
+    console.log("Candidate ID:", candidateId);
+
     const formData = new FormData();
     formData.append('profile_image', file);
+    formData.append("candidate_id", candidateId);
 
     try {
       const response = await axios.post(
@@ -70,7 +74,10 @@ const ProfilePage = () => {
         formData,
         { withCredentials: true }
       );
-      setProfileImage(response.data.profileImage);
+      console.log("Upload successful:", response.data);
+      setProfileImage(response.data.image_url);
+      console.log("Final image URL:", `http://127.0.0.1:5000/uploads/${response.data.image_url}`);
+
     } catch (error) {
       console.error("Error uploading image:", error);
     }
@@ -92,7 +99,7 @@ const ProfilePage = () => {
 
       <div style={styles.profileIcon} onClick={() => document.getElementById('fileInput').click()}>
         <img 
-          src={profileImage ? `/static/${profileImage}` : addpro} 
+          src={profileImage ? profileImage : addpro} 
           alt="Profile" 
           style={styles.profileImage} 
         />
