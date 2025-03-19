@@ -116,7 +116,7 @@ six==1.14.0
 SQLAlchemy==2.0.37
 sqlparse==0.5.3
 #systemd-python==234
-ttystatus==0.38
+#ttystatus==0.38
 twilio==9.4.6
 typing-extensions==4.12.2
 ubuntu-drivers-common==0.0.0
