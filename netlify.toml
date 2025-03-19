@@ -1,4 +1,7 @@
 [build]
-  base = "frontend/festival"
-  publish = "frontend/festival/build"
-  command = "npm run build"
+  base = "frontend"
+  publish = "frontend/build"
+  command = "npm install && npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
