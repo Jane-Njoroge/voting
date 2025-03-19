@@ -41,7 +41,6 @@ app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS','False').lower() == 'true'
 
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 CORS(app,supports_credentials=True) 
-#CORS(app,supports_credentials=True, origins=["http://127.0.0.1:5000", "http://localhost:3000"]) 
 
 
 db = SQLAlchemy(app)
