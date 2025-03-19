@@ -69,18 +69,18 @@ function SignupForm() {
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 };
-
+const API_BASE_URL = "https://voting-9673.onrender.com";
 const handleSignupSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-        const response = await axios.post("/signup", formData, {
+        const response = await axios.post(`${API_BASE_URL}/signup`, formData, {
             headers: {
                 "Content-Type": "application/json",
             },
         });
         
-        // Store the JWT token in local storage upon successful signup
+        
         const token = response.data.token;
         if (token) {
             localStorage.setItem('token', token);
