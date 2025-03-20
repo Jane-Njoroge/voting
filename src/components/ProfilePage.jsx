@@ -3,12 +3,13 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import addpro from './addpro.webp';
 import pro1 from './pro1.jpg';
-import grunge from './grunge.jpg'; 
+import grunge from './grunge.jpg';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
   const { candidateId } = useParams();
   const { state } = useLocation();
+  const API_BASE_URL = "https://voting-9673.onrender.com";
 
   const [name, setName] = useState(null);
   const [votes, setVotes] = useState(0);
@@ -20,12 +21,11 @@ const ProfilePage = () => {
     const fetchData = async () => {
       try {
         const nameProfileResponse = await axios.get(
-          `/get_name_profile_image/${candidateId}`,
+          `${API_BASE_URL}/get_name_profile_image/${candidateId}`,
           { withCredentials: true }
         );
         setName(nameProfileResponse.data.full_name || "Unknown Name");
         setProfileImage(nameProfileResponse.data.profileImage || null);
-        
         setCategory(nameProfileResponse.data.category || "");
       } catch (error) {
         console.error("Error fetching profile data:", error);
@@ -36,7 +36,7 @@ const ProfilePage = () => {
     const fetchVotes = async () => {
       try {
         const votesResponse = await axios.get(
-          `http://127.0.0.1:5000/candidate/${candidateId}/votes`,
+          `${API_BASE_URL}/candidate/${candidateId}/votes`,
           { withCredentials: true }
         );
         setVotes(votesResponse.data.vote_count || 0);
@@ -47,15 +47,15 @@ const ProfilePage = () => {
     };
 
     if (candidateId !== '0') {
-     Promise.all([fetchData(), fetchVotes()])
-       .then(() => setIsLoading(false))
+      Promise.all([fetchData(), fetchVotes()])
+        .then(() => setIsLoading(false))
         .catch(() => setIsLoading(false));
       const intervalId = setInterval(fetchVotes, 5000);
       return () => clearInterval(intervalId);
     } else {
-     setIsLoading(false);
+      setIsLoading(false);
     }
- }, [candidateId, state?.category]); 
+  }, [candidateId, state?.category]);
 
   const handleImageChange = async (event) => {
     const file = event.target.files[0];
@@ -70,14 +70,13 @@ const ProfilePage = () => {
 
     try {
       const response = await axios.post(
-        `/upload_profile_image/${candidateId}`,
+        `${API_BASE_URL}/upload_profile_image/${candidateId}`,
         formData,
         { withCredentials: true }
       );
       console.log("Upload successful:", response.data);
-      setProfileImage(response.data.image_url);
-      console.log("Final image URL:", `http://127.0.0.1:5000/uploads/${response.data.image_url}`);
-
+      setProfileImage(`${API_BASE_URL}/uploads/${response.data.image_url}`);
+      console.log("Final image URL:", `${API_BASE_URL}/uploads/${response.data.image_url}`);
     } catch (error) {
       console.error("Error uploading image:", error);
     }
@@ -88,20 +87,17 @@ const ProfilePage = () => {
   }
 
   return (
-    <div style={{
-      ...styles.container,
-      backgroundImage: `url(${grunge})`, 
-    }}>
+    <div style={{ ...styles.container, backgroundImage: `url(${grunge})` }}>
       <div style={styles.headerSection}>
         <h2 style={styles.name}>Name: {name}</h2>
         <h3 style={styles.category}>Category: {category || "Not selected"}</h3>
       </div>
 
       <div style={styles.profileIcon} onClick={() => document.getElementById('fileInput').click()}>
-        <img 
-          src={profileImage ? profileImage : addpro} 
-          alt="Profile" 
-          style={styles.profileImage} 
+        <img
+          src={profileImage ? profileImage : addpro}
+          alt="Profile"
+          style={styles.profileImage}
         />
       </div>
 
@@ -115,8 +111,8 @@ const ProfilePage = () => {
 
       <p style={styles.votes}>Votes: {votes}</p>
 
-      <div 
-        style={styles.accountIcon} 
+      <div
+        style={styles.accountIcon}
         onClick={() => navigate(`/verification-form/${candidateId}`)}
       >
         <img src={pro1} alt="Account" style={styles.accountImage} />

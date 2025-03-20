@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 
 const cardTexts = [
   "Best Overall Kalenjin Artiste- Secular",
@@ -40,67 +41,57 @@ const cardTexts = [
 
 const ScrollableCards = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-   
+  const API_BASE_URL = "https://voting-9673.onrender.com";
 
- const handleCategoryClick = async (category) => {
+  const handleCategoryClick = async (category) => {
+    const candidateId = Number(sessionStorage.getItem("candidate_id"));
+    const token = localStorage.getItem("token");
 
-  const candidateId = Number(sessionStorage.getItem("candidate_id"));
+    if (!candidateId) {
+      alert("Candidate ID is missing. Please log in again.");
+      console.error("Candidate ID not found in sessionStorage.");
+      return;
+    }
 
-if (!candidateId) {
-  alert("Candidate ID is missing. Please log in again.");
-  console.error(" Candidate ID not found in sessionStorage.");
-  return;
-}
+    console.log("Candidate ID Retrieved:", candidateId);
+    console.log("Sending to backend:", { category, candidate_id: candidateId });
 
-console.log("Candidate ID Retrieved:", candidateId);
-console.log("Sending to backend:", { category, candidate_id: candidateId });
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/assign_category`,
+        { candidate_id: candidateId, category },
+        {
+          withCredentials: true,
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-try {
+      console.log("Response from backend:", response.data);
 
-  const response = await fetch("/assign_category", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ candidate_id: candidateId, category }),
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Server error: ${response.status}`);
-  }
-
-  const result = await response.json();
-  console.log("Response from backend:", result);
-
-  if (result.message === "Category assigned successfully") {
-    console.log(" Navigating to verification page...");
-    navigate(`/profile-page/${candidateId}`, {
-      state: {category: category}
-    });
-
-  }
-} catch (error) {
-  console.error("Error handling category assignment:", error.message);
-}
+      if (response.data.message === "Category assigned successfully") {
+        console.log("Navigating to profile page...");
+        navigate(`/profile-page/${candidateId}`, { state: { category } });
+      }
+    } catch (error) {
+      console.error("Error handling category assignment:", error.message);
+      alert(error.response?.data?.error || "Failed to assign category.");
+    }
   };
 
   return (
     <div style={styles.container}>
-
-  <div style={styles.cardsWrapper}>
-    {cardTexts.map((text, index) => (
-      <div 
-        key={index} 
-        style={styles.card}
-        onClick={() => handleCategoryClick(text)}
-      >
-        <span href="#" style={styles.link}>{text}</span>
+      <div style={styles.cardsWrapper}>
+        {cardTexts.map((text, index) => (
+          <div
+            key={index}
+            style={styles.card}
+            onClick={() => handleCategoryClick(text)}
+          >
+            <span style={styles.link}>{text}</span>
+          </div>
+        ))}
       </div>
-    ))}
-  </div>
-</div>
+    </div>
   );
 };
 

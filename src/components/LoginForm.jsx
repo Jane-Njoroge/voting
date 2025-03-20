@@ -8,6 +8,7 @@ const LoginForm = () => {
     const [emailError, setEmailError] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const navigate = useNavigate();
+    const API_BASE_URL = "https://voting-9673.onrender.com";
 
     useEffect(() => {
         const checkSession = async () => {
@@ -19,7 +20,7 @@ const LoginForm = () => {
                 console.log("No token found. User not logged in.");
                 return;
               }
-                const response = await axios.post("http://127.0.0.1:5000/check-session",{
+                const response = await axios.post( "${API_BASE_URL}/check-session",{
                   withCredentials: true,
                   headers: { 
                     "Authorization": `Bearer ${token}` 

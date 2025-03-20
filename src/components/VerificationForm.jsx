@@ -10,6 +10,8 @@ const VerificationPage = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [enteredOTP, setEnteredOTP] = useState("");
 
+  const backendUrl = "https://voting-9673.onrender.com";
+  
   const sendOTP = async () => {
     if (!idNumber || !phoneNumber) {
       alert("Please enter your ID number and phone number.");
