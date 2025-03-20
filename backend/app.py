@@ -121,6 +121,7 @@ class Votes(db.Model):
 @app.route('/')
 def home():
    return "Voting Backend is Running!"
+print(app.url_map)
 
 
 @app.route('/signup', methods=['POST'])
