@@ -11,7 +11,8 @@ function SignupForm() {
     });
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
- 
+    const API_BASE_URL = "https://voting-9673.onrender.com";
+
  const styles = {
     container: {
       display: "flex",
@@ -68,55 +69,84 @@ function SignupForm() {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-};
-const API_BASE_URL = "https://voting-9673.onrender.com";
-const handleSignupSubmit = async (e) => {
+  };
+
+  const handleSignupSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     console.log("Sending signup request:", formData);
 
     try {
-        const response = await axios.post(`${API_BASE_URL}/signup`, formData, {
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-        
-        
-        const token = response.data.token;
-        if (token) {
-            localStorage.setItem('token', token);
+      const response = await axios.post(
+        `${API_BASE_URL}/signup`,
+        formData,
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
         }
+      );
 
-        alert(response.data.message);
-        navigate("/login");
+      const token = response.data.token;
+      if (token) {
+        localStorage.setItem("token", token);
+      }
+
+      alert(response.data.message);
+      navigate("/login");
     } catch (error) {
-        setLoading(false);
-        setErrorMessage(error.response?.data?.error || "Signup failed. Try again!");
+      setLoading(false);
+      setErrorMessage(error.response?.data?.error || "Signup failed. Try again!");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
+  };
 
-return (
+  return (
     <div style={styles.container}>
-        <div style={styles.formContainer}>
-            <h2 style={styles.heading}>Signup:</h2>
-            {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
-            <form onSubmit={handleSignupSubmit}>
-                <input type="text" name="full_name" placeholder="Full Name:" style={styles.inputField} value={formData.full_name} onChange={handleInputChange} required />
-                <input type="email" name="email" placeholder="Email:" style={styles.inputField} value={formData.email} onChange={handleInputChange} required />
-                <input type="password" name="password" placeholder="Password:" style={styles.inputField} value={formData.password} onChange={handleInputChange} required />
-                <button type="submit" style={styles.button} disabled={loading}>
-                    {loading ? "Signing up..." : "SignUp"}
-                </button>
-            </form>
-            <p style={styles.linkText}>
-                Already have an account? <span style={styles.loginButton} onClick={() => navigate("/login")}>Login</span>
-            </p>
-        </div>
+      <div style={styles.formContainer}>
+        <h2 style={styles.heading}>Signup:</h2>
+        {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
+        <form onSubmit={handleSignupSubmit}>
+          <input
+            type="text"
+            name="full_name"
+            placeholder="Full Name:"
+            style={styles.inputField}
+            value={formData.full_name}
+            onChange={handleInputChange}
+            required
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email:"
+            style={styles.inputField}
+            value={formData.email}
+            onChange={handleInputChange}
+            required
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password:"
+            style={styles.inputField}
+            value={formData.password}
+            onChange={handleInputChange}
+            required
+          />
+          <button type="submit" style={styles.button} disabled={loading}>
+            {loading ? "Signing up..." : "SignUp"}
+          </button>
+        </form>
+        <p style={styles.linkText}>
+          Already have an account?{" "}
+          <span style={styles.loginButton} onClick={() => navigate("/login")}>
+            Login
+          </span>
+        </p>
+      </div>
     </div>
-);
+  );
 }
 
 export default SignupForm;
