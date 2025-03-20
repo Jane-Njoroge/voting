@@ -11,7 +11,7 @@ function SignupForm() {
     });
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
-    const API_BASE_URL = "https://voting-9673.onrender.com";
+    const API_BASE_URL = "https://voting-9nlf.onrender.com";
 
  const styles = {
     container: {
