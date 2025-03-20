@@ -43,7 +43,7 @@ app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS','False').lower() == 'true'
 
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 #CORS(app, resources={r"/*": {"origins": [ "https://voting-1-mf9r.onrender.com"]}}, supports_credentials=True)
-CORS(app, origins=["https://voting-1-mf9r.onrender.com"])
+CORS(app, origins=["https://voting-1-mf9r.onrender.com"],supports_credentials=True)
 
 
 db = SQLAlchemy(app)
