@@ -11,7 +11,6 @@ function SignupForm() {
     });
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
-    const API_BASE_URL = "https://voting-9nlf.onrender.com";
 
  const styles = {
     container: {
@@ -78,7 +77,7 @@ function SignupForm() {
 
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/signup`,
+        `/signup`,
         formData,
         {
           headers: { "Content-Type": "application/json" },
