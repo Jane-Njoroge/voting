@@ -73,6 +73,8 @@ const API_BASE_URL = "https://voting-9673.onrender.com";
 const handleSignupSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    console.log("Sending signup request:", formData);
+
     try {
         const response = await axios.post(`${API_BASE_URL}/signup`, formData, {
             headers: {
