@@ -130,7 +130,7 @@ print(app.url_map)
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()
-
+    print("Received Data:", data)
     full_name = data.get('full_name')
     email = data.get('email')
     password = data.get('password')
